@@ -1,0 +1,1706 @@
+{
+  "info": {
+    "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
+    "name": "CourtMesh API: Indian Court Cases",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a Mongo ObjectId or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| GET | /health | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "courtmesh"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://research.courtmesh.ai/api/v1/prod",
+      "type": "string",
+      "description": "API root. Override this to point at a different environment."
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string",
+      "description": "Your CourtMesh API key, for example cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX. Keep it in a Postman environment, not in the collection."
+    },
+    {
+      "key": "caseId",
+      "value": "",
+      "type": "string",
+      "description": "A case identifier. Accepts a Mongo ObjectId string or a case number."
+    },
+    {
+      "key": "requestId",
+      "value": "",
+      "type": "string",
+      "description": "A timeline job id returned by POST /request-timeline."
+    }
+  ],
+  "item": [
+    {
+      "name": "Search",
+      "description": "Keyword search and semantic search over Indian court judgments.",
+      "item": [
+        {
+          "name": "Search cases (keyword)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/search/cases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "cases"
+              ]
+            },
+            "description": "Keyword search across the OpenSearch index of Indian court judgments.\n\n`query` is required and must be at least one character after trimming. Everything else is optional.\n\nBody fields, taken from the zod schema `searchCasesSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 1 |\n| court | string or string array | optional. Comma separated strings are split server side |\n| year | integer, a four digit string, or an array of either | optional. Integers must be between 1947 and the current year |\n| caseType | string or string array | optional. Values are expanded to court case type codes server side |\n| caseNumber | string or string array | optional. See the caveat below |\n| judgeName | string or string array | optional |\n| judges | string or string array | optional alias for judgeName |\n| judge | string or string array | optional alias for judgeName |\n| fromDate | string | optional, format YYYY-MM-DD |\n| toDate | string | optional, format YYYY-MM-DD |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| searchAfter | string | optional cursor. Send the previous response's `pagination.nextCursor` as a JSON encoded array string |\n| sortBy | \"relevance\" or \"date\" | optional, default \"relevance\" |\n\nJudge precedence in the handler is judgeName, then judges, then judge.\n\nResponse `data` is an array of raw search hits. Each hit carries the indexed document fields plus `_id`, `_score` and `_sort`. Full judgment text is not stored in the index, so `detailedSummary`, `holding`, `keyFacts_joined`, `legalIssues_joined` and `courtsReasoning` never appear here. Fetch a single case with GET /cases/{id} for the curated view.\n\nPagination on this endpoint is `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. `page` is omitted when you paginate with `searchAfter`.\n\nTwo caveats worth knowing before you build against it:\n1. `caseNumber` passes validation and is echoed back in `meta.filters`, but the handler does not forward it to the search backend, so it does not filter results. Put the case number in `query` instead.\n2. `sortBy` is validated as \"relevance\" or \"date\", while the search backend expects \"relevance\", \"recent\" or \"oldest\". Only \"relevance\" is meaningful today.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"trade licence cancelled without notice\",\n  \"court\": \"Bombay High Court\",\n  \"year\": 2021,\n  \"caseType\": \"WP\",\n  \"judgeName\": \"Deshpande\",\n  \"fromDate\": \"2020-01-01\",\n  \"toDate\": \"2021-12-31\",\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"relevance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Results",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/search/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "cases"
+                  ]
+                },
+                "description": "Keyword search across the OpenSearch index of Indian court judgments.\n\n`query` is required and must be at least one character after trimming. Everything else is optional.\n\nBody fields, taken from the zod schema `searchCasesSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 1 |\n| court | string or string array | optional. Comma separated strings are split server side |\n| year | integer, a four digit string, or an array of either | optional. Integers must be between 1947 and the current year |\n| caseType | string or string array | optional. Values are expanded to court case type codes server side |\n| caseNumber | string or string array | optional. See the caveat below |\n| judgeName | string or string array | optional |\n| judges | string or string array | optional alias for judgeName |\n| judge | string or string array | optional alias for judgeName |\n| fromDate | string | optional, format YYYY-MM-DD |\n| toDate | string | optional, format YYYY-MM-DD |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| searchAfter | string | optional cursor. Send the previous response's `pagination.nextCursor` as a JSON encoded array string |\n| sortBy | \"relevance\" or \"date\" | optional, default \"relevance\" |\n\nJudge precedence in the handler is judgeName, then judges, then judge.\n\nResponse `data` is an array of raw search hits. Each hit carries the indexed document fields plus `_id`, `_score` and `_sort`. Full judgment text is not stored in the index, so `detailedSummary`, `holding`, `keyFacts_joined`, `legalIssues_joined` and `courtsReasoning` never appear here. Fetch a single case with GET /cases/{id} for the curated view.\n\nPagination on this endpoint is `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. `page` is omitted when you paginate with `searchAfter`.\n\nTwo caveats worth knowing before you build against it:\n1. `caseNumber` passes validation and is echoed back in `meta.filters`, but the handler does not forward it to the search backend, so it does not filter results. Put the case number in `query` instead.\n2. `sortBy` is validated as \"relevance\" or \"date\", while the search backend expects \"relevance\", \"recent\" or \"oldest\". Only \"relevance\" is meaningful today.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"trade licence cancelled without notice\",\n  \"court\": \"Bombay High Court\",\n  \"year\": 2021,\n  \"caseType\": \"WP\",\n  \"judgeName\": \"Deshpande\",\n  \"fromDate\": \"2020-01-01\",\n  \"toDate\": \"2021-12-31\",\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"relevance\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"mongoId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"title\": \"Ramesh Kumar Traders vs State Of Maharashtra\",\n      \"titleRaw\": \"WP/13424/2018 of Ramesh Kumar Traders vs State Of Maharashtra\",\n      \"summary\": \"Writ petition challenging the cancellation of a trade licence without a hearing.\",\n      \"headnote\": \"Natural justice. Licence cancelled without notice. Order set aside.\",\n      \"petitioners\": [\n        \"Ramesh Kumar Traders\"\n      ],\n      \"respondents\": [\n        \"State Of Maharashtra\",\n        \"Municipal Commissioner\"\n      ],\n      \"parties_all\": [\n        \"Ramesh Kumar Traders\",\n        \"State Of Maharashtra\"\n      ],\n      \"judges\": [\n        \"Hon'ble Mr. Justice A. S. Deshpande\"\n      ],\n      \"advocates\": [\n        \"Mr. P. R. Nair\",\n        \"Ms. S. Iyer\"\n      ],\n      \"caseNumber\": \"WP/13424/2018\",\n      \"extracted_citations\": [\n        \"(2016) 4 SCC 155\"\n      ],\n      \"cited_sections\": [\n        \"CONST 226\"\n      ],\n      \"courtType\": \"High Court\",\n      \"court\": \"Bombay High Court\",\n      \"courtName\": \"Original Side\",\n      \"caseType\": \"WP\",\n      \"caseTypeFullForm\": \"Writ Petition\",\n      \"caseStatus\": \"Disposed\",\n      \"caseYear\": 2021,\n      \"registrationYear\": 2018,\n      \"cnr\": \"MHHC010123452018\",\n      \"source\": \"hc\",\n      \"decisionDate\": \"2021-03-11\",\n      \"registrationDate\": \"2018-08-02\",\n      \"citation\": \"2021 SCC OnLine Bom 512\",\n      \"disposalNature\": \"Allowed\",\n      \"hasDocuments\": true,\n      \"documentTypes\": [\n        \"Judgment\"\n      ],\n      \"practiceAreas\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"precedentValue\": \"Persuasive\",\n      \"s3Key\": \"hc/bombay/2021/wp-13424-2018.pdf\",\n      \"createdAt\": \"2024-11-02T06:41:18.220Z\",\n      \"updatedAt\": \"2025-06-19T11:02:44.881Z\",\n      \"_id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"_score\": 38.41207,\n      \"_sort\": [\n        38.41207,\n        \"6710b2f4a1c9e2d3f4a5b6c7\"\n      ]\n    }\n  ],\n  \"meta\": {\n    \"query\": \"trade licence cancelled without notice\",\n    \"filters\": {\n      \"court\": \"Bombay High Court\",\n      \"year\": 2021,\n      \"caseType\": \"WP\",\n      \"caseNumber\": null,\n      \"judgeName\": \"Deshpande\",\n      \"fromDate\": \"2020-01-01\",\n      \"toDate\": \"2021-12-31\"\n    },\n    \"responseTime\": \"412ms\"\n  },\n  \"pagination\": {\n    \"total\": 137,\n    \"hasMore\": true,\n    \"page\": 1,\n    \"limit\": 20,\n    \"nextCursor\": [\n      38.41207,\n      \"6710b2f4a1c9e2d3f4a5b6c7\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "400 Validation failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/search/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "cases"
+                  ]
+                },
+                "description": "Keyword search across the OpenSearch index of Indian court judgments.\n\n`query` is required and must be at least one character after trimming. Everything else is optional.\n\nBody fields, taken from the zod schema `searchCasesSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 1 |\n| court | string or string array | optional. Comma separated strings are split server side |\n| year | integer, a four digit string, or an array of either | optional. Integers must be between 1947 and the current year |\n| caseType | string or string array | optional. Values are expanded to court case type codes server side |\n| caseNumber | string or string array | optional. See the caveat below |\n| judgeName | string or string array | optional |\n| judges | string or string array | optional alias for judgeName |\n| judge | string or string array | optional alias for judgeName |\n| fromDate | string | optional, format YYYY-MM-DD |\n| toDate | string | optional, format YYYY-MM-DD |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| searchAfter | string | optional cursor. Send the previous response's `pagination.nextCursor` as a JSON encoded array string |\n| sortBy | \"relevance\" or \"date\" | optional, default \"relevance\" |\n\nJudge precedence in the handler is judgeName, then judges, then judge.\n\nResponse `data` is an array of raw search hits. Each hit carries the indexed document fields plus `_id`, `_score` and `_sort`. Full judgment text is not stored in the index, so `detailedSummary`, `holding`, `keyFacts_joined`, `legalIssues_joined` and `courtsReasoning` never appear here. Fetch a single case with GET /cases/{id} for the curated view.\n\nPagination on this endpoint is `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. `page` is omitted when you paginate with `searchAfter`.\n\nTwo caveats worth knowing before you build against it:\n1. `caseNumber` passes validation and is echoed back in `meta.filters`, but the handler does not forward it to the search backend, so it does not filter results. Put the case number in `query` instead.\n2. `sortBy` is validated as \"relevance\" or \"date\", while the search backend expects \"relevance\", \"recent\" or \"oldest\". Only \"relevance\" is meaningful today.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"trade licence cancelled without notice\",\n  \"court\": \"Bombay High Court\",\n  \"year\": 2021,\n  \"caseType\": \"WP\",\n  \"judgeName\": \"Deshpande\",\n  \"fromDate\": \"2020-01-01\",\n  \"toDate\": \"2021-12-31\",\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"relevance\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"details\": [\n    \"query: Search query cannot be empty. Please provide a search term.\"\n  ]\n}"
+            },
+            {
+              "name": "429 Rate limit exceeded",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/search/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "cases"
+                  ]
+                },
+                "description": "Keyword search across the OpenSearch index of Indian court judgments.\n\n`query` is required and must be at least one character after trimming. Everything else is optional.\n\nBody fields, taken from the zod schema `searchCasesSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 1 |\n| court | string or string array | optional. Comma separated strings are split server side |\n| year | integer, a four digit string, or an array of either | optional. Integers must be between 1947 and the current year |\n| caseType | string or string array | optional. Values are expanded to court case type codes server side |\n| caseNumber | string or string array | optional. See the caveat below |\n| judgeName | string or string array | optional |\n| judges | string or string array | optional alias for judgeName |\n| judge | string or string array | optional alias for judgeName |\n| fromDate | string | optional, format YYYY-MM-DD |\n| toDate | string | optional, format YYYY-MM-DD |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| searchAfter | string | optional cursor. Send the previous response's `pagination.nextCursor` as a JSON encoded array string |\n| sortBy | \"relevance\" or \"date\" | optional, default \"relevance\" |\n\nJudge precedence in the handler is judgeName, then judges, then judge.\n\nResponse `data` is an array of raw search hits. Each hit carries the indexed document fields plus `_id`, `_score` and `_sort`. Full judgment text is not stored in the index, so `detailedSummary`, `holding`, `keyFacts_joined`, `legalIssues_joined` and `courtsReasoning` never appear here. Fetch a single case with GET /cases/{id} for the curated view.\n\nPagination on this endpoint is `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. `page` is omitted when you paginate with `searchAfter`.\n\nTwo caveats worth knowing before you build against it:\n1. `caseNumber` passes validation and is echoed back in `meta.filters`, but the handler does not forward it to the search backend, so it does not filter results. Put the case number in `query` instead.\n2. `sortBy` is validated as \"relevance\" or \"date\", while the search backend expects \"relevance\", \"recent\" or \"oldest\". Only \"relevance\" is meaningful today.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"trade licence cancelled without notice\",\n  \"court\": \"Bombay High Court\",\n  \"year\": 2021,\n  \"caseType\": \"WP\",\n  \"judgeName\": \"Deshpande\",\n  \"fromDate\": \"2020-01-01\",\n  \"toDate\": \"2021-12-31\",\n  \"page\": 1,\n  \"limit\": 20,\n  \"sortBy\": \"relevance\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Rate limit exceeded\",\n  \"message\": \"Too many requests. Maximum 10 requests per minute allowed.\",\n  \"retryAfter\": 37,\n  \"resetTime\": \"2026-08-10T09:15:00.000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search cases (semantic)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/search/cases/semantic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "cases",
+                "semantic"
+              ]
+            },
+            "description": "Vector search over the semantic index, with a language model pre step that pulls filters out of your natural language query.\n\n`query` is required and must be at least three characters. This endpoint is billed as an AI interaction.\n\nBody fields, taken from the zod schema `semanticSearchSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 3 |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| filters | object | optional. This is the filter channel the handler actually reads |\n| court, year, caseType, caseNumber, judgeName, judges, judge, fromDate, toDate | string, array or integer | accepted by validation but ignored by this handler |\n\nOnly `query`, `page`, `limit` and `filters` are read. The top level filter fields pass validation and are then dropped, so put your filters inside the `filters` object. Keys the handler understands inside `filters`: `court`, `caseType`, `caseYear`, `caseNumber`, `judgeName` (`judges` and `judge` are mapped onto it), `decisionDate` as `{ \"$gte\": \"...\", \"$lte\": \"...\" }`, `practiceArea` and `sourceCaseId`. Filters you supply win over filters the model extracted from the query.\n\nEach result carries a `similarity` score from the vector index. The minimum score threshold is 0.3.\n\nThree response variants:\n1. Normal. `meta.searchType` is \"semantic\" and `data` holds the curated case objects shown in the example.\n2. No matches. `meta.message` is \"No similar cases found.\" and `data` is empty.\n3. Filter only query. When the model strips the query down to fewer than three characters, the request falls back to keyword search. `meta.fallbackMode` is \"opensearch\" and `data` items are raw search hits in the shape returned by POST /search/cases.\n\nTransport quirk that matters: this handler writes the 200 status line before it starts work, so a failure part way through still arrives as HTTP 200 with a body of `{ \"success\": false, \"error\": \"...\" }`. Check the `success` field, do not trust the status code alone.\n\nPagination here is `{ page, limit, total, totalPages, hasMore }`. `total` and `totalPages` are estimates and are only exact on the final page.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"employer terminated a workman without holding a domestic enquiry\",\n  \"page\": 1,\n  \"limit\": 10,\n  \"filters\": {\n    \"court\": \"Supreme Court of India\",\n    \"caseYear\": 2019\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Results",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/search/cases/semantic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "cases",
+                    "semantic"
+                  ]
+                },
+                "description": "Vector search over the semantic index, with a language model pre step that pulls filters out of your natural language query.\n\n`query` is required and must be at least three characters. This endpoint is billed as an AI interaction.\n\nBody fields, taken from the zod schema `semanticSearchSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 3 |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| filters | object | optional. This is the filter channel the handler actually reads |\n| court, year, caseType, caseNumber, judgeName, judges, judge, fromDate, toDate | string, array or integer | accepted by validation but ignored by this handler |\n\nOnly `query`, `page`, `limit` and `filters` are read. The top level filter fields pass validation and are then dropped, so put your filters inside the `filters` object. Keys the handler understands inside `filters`: `court`, `caseType`, `caseYear`, `caseNumber`, `judgeName` (`judges` and `judge` are mapped onto it), `decisionDate` as `{ \"$gte\": \"...\", \"$lte\": \"...\" }`, `practiceArea` and `sourceCaseId`. Filters you supply win over filters the model extracted from the query.\n\nEach result carries a `similarity` score from the vector index. The minimum score threshold is 0.3.\n\nThree response variants:\n1. Normal. `meta.searchType` is \"semantic\" and `data` holds the curated case objects shown in the example.\n2. No matches. `meta.message` is \"No similar cases found.\" and `data` is empty.\n3. Filter only query. When the model strips the query down to fewer than three characters, the request falls back to keyword search. `meta.fallbackMode` is \"opensearch\" and `data` items are raw search hits in the shape returned by POST /search/cases.\n\nTransport quirk that matters: this handler writes the 200 status line before it starts work, so a failure part way through still arrives as HTTP 200 with a body of `{ \"success\": false, \"error\": \"...\" }`. Check the `success` field, do not trust the status code alone.\n\nPagination here is `{ page, limit, total, totalPages, hasMore }`. `total` and `totalPages` are estimates and are only exact on the final page.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"employer terminated a workman without holding a domestic enquiry\",\n  \"page\": 1,\n  \"limit\": 10,\n  \"filters\": {\n    \"court\": \"Supreme Court of India\",\n    \"caseYear\": 2019\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"caseNumber\": \"WP/13424/2018\",\n      \"title\": \"Ramesh Kumar Traders vs State Of Maharashtra\",\n      \"court\": \"Bombay High Court\",\n      \"caseType\": \"WP\",\n      \"judges\": [\n        \"Hon'ble Mr. Justice A. S. Deshpande\"\n      ],\n      \"petitioners\": [\n        \"Ramesh Kumar Traders\"\n      ],\n      \"respondents\": [\n        \"State Of Maharashtra\",\n        \"Municipal Commissioner\"\n      ],\n      \"decisionDate\": \"2021-03-11T00:00:00.000Z\",\n      \"disposalNature\": \"Allowed\",\n      \"summary\": \"Writ petition challenging the cancellation of a trade licence without a hearing.\",\n      \"hasDocuments\": true,\n      \"hasAnalysis\": true,\n      \"similarity\": 0.4821\n    }\n  ],\n  \"meta\": {\n    \"query\": \"employer terminated a workman without holding a domestic enquiry\",\n    \"appliedFilters\": {\n      \"court\": \"Supreme Court of India\",\n      \"caseYear\": 2019\n    },\n    \"responseTime\": \"2841ms\",\n    \"searchType\": \"semantic\"\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 11,\n    \"totalPages\": 2,\n    \"hasMore\": true\n  }\n}"
+            },
+            {
+              "name": "200 No matches",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/search/cases/semantic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "cases",
+                    "semantic"
+                  ]
+                },
+                "description": "Vector search over the semantic index, with a language model pre step that pulls filters out of your natural language query.\n\n`query` is required and must be at least three characters. This endpoint is billed as an AI interaction.\n\nBody fields, taken from the zod schema `semanticSearchSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 3 |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| filters | object | optional. This is the filter channel the handler actually reads |\n| court, year, caseType, caseNumber, judgeName, judges, judge, fromDate, toDate | string, array or integer | accepted by validation but ignored by this handler |\n\nOnly `query`, `page`, `limit` and `filters` are read. The top level filter fields pass validation and are then dropped, so put your filters inside the `filters` object. Keys the handler understands inside `filters`: `court`, `caseType`, `caseYear`, `caseNumber`, `judgeName` (`judges` and `judge` are mapped onto it), `decisionDate` as `{ \"$gte\": \"...\", \"$lte\": \"...\" }`, `practiceArea` and `sourceCaseId`. Filters you supply win over filters the model extracted from the query.\n\nEach result carries a `similarity` score from the vector index. The minimum score threshold is 0.3.\n\nThree response variants:\n1. Normal. `meta.searchType` is \"semantic\" and `data` holds the curated case objects shown in the example.\n2. No matches. `meta.message` is \"No similar cases found.\" and `data` is empty.\n3. Filter only query. When the model strips the query down to fewer than three characters, the request falls back to keyword search. `meta.fallbackMode` is \"opensearch\" and `data` items are raw search hits in the shape returned by POST /search/cases.\n\nTransport quirk that matters: this handler writes the 200 status line before it starts work, so a failure part way through still arrives as HTTP 200 with a body of `{ \"success\": false, \"error\": \"...\" }`. Check the `success` field, do not trust the status code alone.\n\nPagination here is `{ page, limit, total, totalPages, hasMore }`. `total` and `totalPages` are estimates and are only exact on the final page.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"employer terminated a workman without holding a domestic enquiry\",\n  \"page\": 1,\n  \"limit\": 10,\n  \"filters\": {\n    \"court\": \"Supreme Court of India\",\n    \"caseYear\": 2019\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [],\n  \"meta\": {\n    \"query\": \"employer terminated a workman without holding a domestic enquiry\",\n    \"appliedFilters\": {},\n    \"responseTime\": \"1904ms\",\n    \"message\": \"No similar cases found.\"\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 0,\n    \"totalPages\": 0,\n    \"hasMore\": false\n  }\n}"
+            },
+            {
+              "name": "200 with success false (error after headers were sent)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/search/cases/semantic",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "cases",
+                    "semantic"
+                  ]
+                },
+                "description": "Vector search over the semantic index, with a language model pre step that pulls filters out of your natural language query.\n\n`query` is required and must be at least three characters. This endpoint is billed as an AI interaction.\n\nBody fields, taken from the zod schema `semanticSearchSchema`:\n\n| field | type | rules |\n| --- | --- | --- |\n| query | string | required, trimmed, minimum length 3 |\n| page | integer | optional, minimum 1, default 1 |\n| limit | integer | optional, 1 to 100, default 20 |\n| filters | object | optional. This is the filter channel the handler actually reads |\n| court, year, caseType, caseNumber, judgeName, judges, judge, fromDate, toDate | string, array or integer | accepted by validation but ignored by this handler |\n\nOnly `query`, `page`, `limit` and `filters` are read. The top level filter fields pass validation and are then dropped, so put your filters inside the `filters` object. Keys the handler understands inside `filters`: `court`, `caseType`, `caseYear`, `caseNumber`, `judgeName` (`judges` and `judge` are mapped onto it), `decisionDate` as `{ \"$gte\": \"...\", \"$lte\": \"...\" }`, `practiceArea` and `sourceCaseId`. Filters you supply win over filters the model extracted from the query.\n\nEach result carries a `similarity` score from the vector index. The minimum score threshold is 0.3.\n\nThree response variants:\n1. Normal. `meta.searchType` is \"semantic\" and `data` holds the curated case objects shown in the example.\n2. No matches. `meta.message` is \"No similar cases found.\" and `data` is empty.\n3. Filter only query. When the model strips the query down to fewer than three characters, the request falls back to keyword search. `meta.fallbackMode` is \"opensearch\" and `data` items are raw search hits in the shape returned by POST /search/cases.\n\nTransport quirk that matters: this handler writes the 200 status line before it starts work, so a failure part way through still arrives as HTTP 200 with a body of `{ \"success\": false, \"error\": \"...\" }`. Check the `success` field, do not trust the status code alone.\n\nPagination here is `{ page, limit, total, totalPages, hasMore }`. `total` and `totalPages` are estimates and are only exact on the final page.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"employer terminated a workman without holding a domestic enquiry\",\n  \"page\": 1,\n  \"limit\": 10,\n  \"filters\": {\n    \"court\": \"Supreme Court of India\",\n    \"caseYear\": 2019\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Vector search failed\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cases",
+      "description": "Single case records, related documents and document access.",
+      "item": [
+        {
+          "name": "Get case",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{caseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cases",
+                "{{caseId}}"
+              ]
+            },
+            "description": "Fetch a single case record without its AI analysis.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nResponse `data` fields: `id`, `caseNumber`, `title`, `court`, `caseType`, `judges`, `petitioners`, `respondents`, `decisionDate`, `disposalNature`, `summary`, `metadata.diaryNumber` when present, `hasDocuments`, `documentCount` and `hasAnalysis`. Keys whose value is undefined are removed from the response.\n\nFree text in this response is watermarked per API key holder.\n\n`detailedSummary`, `headnote`, `holding` and `keyFacts` are deliberately not here. Call GET /cases/{id}/analysis for those."
+          },
+          "response": [
+            {
+              "name": "200 Case",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}"
+                  ]
+                },
+                "description": "Fetch a single case record without its AI analysis.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nResponse `data` fields: `id`, `caseNumber`, `title`, `court`, `caseType`, `judges`, `petitioners`, `respondents`, `decisionDate`, `disposalNature`, `summary`, `metadata.diaryNumber` when present, `hasDocuments`, `documentCount` and `hasAnalysis`. Keys whose value is undefined are removed from the response.\n\nFree text in this response is watermarked per API key holder.\n\n`detailedSummary`, `headnote`, `holding` and `keyFacts` are deliberately not here. Call GET /cases/{id}/analysis for those."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n    \"caseNumber\": \"WP/13424/2018\",\n    \"title\": \"Ramesh Kumar Traders vs State Of Maharashtra\",\n    \"court\": \"Bombay High Court\",\n    \"caseType\": \"WP\",\n    \"judges\": [\n      \"Hon'ble Mr. Justice A. S. Deshpande\"\n    ],\n    \"petitioners\": [\n      \"Ramesh Kumar Traders\"\n    ],\n    \"respondents\": [\n      \"State Of Maharashtra\",\n      \"Municipal Commissioner\"\n    ],\n    \"decisionDate\": \"2021-03-11T00:00:00.000Z\",\n    \"disposalNature\": \"Allowed\",\n    \"summary\": \"Writ petition challenging the cancellation of a trade licence without a hearing.\",\n    \"metadata\": {\n      \"diaryNumber\": \"13424/2018\"\n    },\n    \"hasDocuments\": true,\n    \"documentCount\": 1,\n    \"hasAnalysis\": true\n  },\n  \"meta\": {\n    \"responseTime\": \"58ms\",\n    \"note\": \"Use /cases/:id/analysis endpoint to get AI analysis separately\"\n  }\n}"
+            },
+            {
+              "name": "404 Case not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}"
+                  ]
+                },
+                "description": "Fetch a single case record without its AI analysis.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nResponse `data` fields: `id`, `caseNumber`, `title`, `court`, `caseType`, `judges`, `petitioners`, `respondents`, `decisionDate`, `disposalNature`, `summary`, `metadata.diaryNumber` when present, `hasDocuments`, `documentCount` and `hasAnalysis`. Keys whose value is undefined are removed from the response.\n\nFree text in this response is watermarked per API key holder.\n\n`detailedSummary`, `headnote`, `holding` and `keyFacts` are deliberately not here. Call GET /cases/{id}/analysis for those."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Case not found\"\n}"
+            },
+            {
+              "name": "401 Invalid API key",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}"
+                  ]
+                },
+                "description": "Fetch a single case record without its AI analysis.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nResponse `data` fields: `id`, `caseNumber`, `title`, `court`, `caseType`, `judges`, `petitioners`, `respondents`, `decisionDate`, `disposalNature`, `summary`, `metadata.diaryNumber` when present, `hasDocuments`, `documentCount` and `hasAnalysis`. Keys whose value is undefined are removed from the response.\n\nFree text in this response is watermarked per API key holder.\n\n`detailedSummary`, `headnote`, `holding` and `keyFacts` are deliberately not here. Call GET /cases/{id}/analysis for those."
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Invalid API key\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get related documents and timeline",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{caseId}}/related",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cases",
+                "{{caseId}}",
+                "related"
+              ]
+            },
+            "description": "List every stored document that shares this case's case number, plus a derived hearing timeline.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\n`data.relatedDocuments` is capped at 50 documents and each entry carries `id`, `title`, `caseNumber`, `court`, `decisionDate` as YYYY-MM-DD, `caseType` and `isCurrent`. The list is returned newest first.\n\n`data.timeline` only includes documents that have both a decision date and a stored PDF, sorted oldest first. Each event carries `date`, `status`, `statusLabel` and `documentId`. `status` is one of \"Final Judgment\", \"Hearings / Orders\" or \"Case Initiated\". The earliest event is relabelled \"Case Initiated\" unless it is already a final judgment. `statusLabel` is the disposal nature when the document has one, otherwise it repeats the status.\n\nWhen the case has no case number, `data` is `{ \"relatedDocuments\": [], \"timeline\": [] }` and `meta.message` explains why."
+          },
+          "response": [
+            {
+              "name": "200 Related documents",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/related",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "related"
+                  ]
+                },
+                "description": "List every stored document that shares this case's case number, plus a derived hearing timeline.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\n`data.relatedDocuments` is capped at 50 documents and each entry carries `id`, `title`, `caseNumber`, `court`, `decisionDate` as YYYY-MM-DD, `caseType` and `isCurrent`. The list is returned newest first.\n\n`data.timeline` only includes documents that have both a decision date and a stored PDF, sorted oldest first. Each event carries `date`, `status`, `statusLabel` and `documentId`. `status` is one of \"Final Judgment\", \"Hearings / Orders\" or \"Case Initiated\". The earliest event is relabelled \"Case Initiated\" unless it is already a final judgment. `statusLabel` is the disposal nature when the document has one, otherwise it repeats the status.\n\nWhen the case has no case number, `data` is `{ \"relatedDocuments\": [], \"timeline\": [] }` and `meta.message` explains why."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"relatedDocuments\": [\n      {\n        \"id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n        \"title\": \"Ramesh Kumar Traders vs State Of Maharashtra\",\n        \"caseNumber\": \"WP/13424/2018\",\n        \"court\": \"Bombay High Court\",\n        \"decisionDate\": \"2021-03-11\",\n        \"caseType\": \"WP\",\n        \"isCurrent\": true\n      },\n      {\n        \"id\": \"6710b2f4a1c9e2d3f4a5b6c8\",\n        \"title\": \"Order dated 12 January 2020\",\n        \"caseNumber\": \"WP/13424/2018\",\n        \"court\": \"Bombay High Court\",\n        \"decisionDate\": \"2020-01-12\",\n        \"caseType\": \"Order\",\n        \"isCurrent\": false\n      }\n    ],\n    \"timeline\": [\n      {\n        \"date\": \"2020-01-12\",\n        \"status\": \"Case Initiated\",\n        \"statusLabel\": \"Case Initiated\",\n        \"documentId\": \"6710b2f4a1c9e2d3f4a5b6c8\"\n      },\n      {\n        \"date\": \"2021-03-11\",\n        \"status\": \"Final Judgment\",\n        \"statusLabel\": \"Allowed\",\n        \"documentId\": \"6710b2f4a1c9e2d3f4a5b6c7\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"responseTime\": \"74ms\",\n    \"caseNumber\": \"WP/13424/2018\",\n    \"totalDocuments\": 2,\n    \"timelineEvents\": 2\n  }\n}"
+            },
+            {
+              "name": "200 No case number",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/related",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "related"
+                  ]
+                },
+                "description": "List every stored document that shares this case's case number, plus a derived hearing timeline.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\n`data.relatedDocuments` is capped at 50 documents and each entry carries `id`, `title`, `caseNumber`, `court`, `decisionDate` as YYYY-MM-DD, `caseType` and `isCurrent`. The list is returned newest first.\n\n`data.timeline` only includes documents that have both a decision date and a stored PDF, sorted oldest first. Each event carries `date`, `status`, `statusLabel` and `documentId`. `status` is one of \"Final Judgment\", \"Hearings / Orders\" or \"Case Initiated\". The earliest event is relabelled \"Case Initiated\" unless it is already a final judgment. `statusLabel` is the disposal nature when the document has one, otherwise it repeats the status.\n\nWhen the case has no case number, `data` is `{ \"relatedDocuments\": [], \"timeline\": [] }` and `meta.message` explains why."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"relatedDocuments\": [],\n    \"timeline\": []\n  },\n  \"meta\": {\n    \"responseTime\": \"31ms\",\n    \"message\": \"No case number found for this case\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get case PDF URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{caseId}}/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cases",
+                "{{caseId}}",
+                "pdf"
+              ]
+            },
+            "description": "Get an encrypted, presigned download URL for the case PDF.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\n`data.pdfUrl` is ciphertext, not a URL you can fetch directly. It wraps a presigned S3 link that expires after `data.expiresIn` seconds, which is 3600. Decryption uses a case specific key and is handled by the CourtMesh SDKs.\n\nReturns 404 with \"PDF not available for this case\" when the case record has no stored document."
+          },
+          "response": [
+            {
+              "name": "200 Encrypted URL",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "pdf"
+                  ]
+                },
+                "description": "Get an encrypted, presigned download URL for the case PDF.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\n`data.pdfUrl` is ciphertext, not a URL you can fetch directly. It wraps a presigned S3 link that expires after `data.expiresIn` seconds, which is 3600. Decryption uses a case specific key and is handled by the CourtMesh SDKs.\n\nReturns 404 with \"PDF not available for this case\" when the case record has no stored document."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"pdfUrl\": \"aG9OZ3Z4TDlxUmJ3ZmM4OjRkYzFmNzIwYzUwNDkyM2E3ZjExYjhlOTAyNGY2ZTAx\",\n    \"expiresIn\": 3600,\n    \"caseId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n    \"caseNumber\": \"WP/13424/2018\",\n    \"caseTitle\": \"Ramesh Kumar Traders vs State Of Maharashtra\"\n  },\n  \"meta\": {\n    \"responseTime\": \"196ms\",\n    \"note\": \"The PDF URL is encrypted and expires in 1 hour. Use the decryption key provided in your SDK.\"\n  }\n}"
+            },
+            {
+              "name": "404 PDF not available",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "pdf"
+                  ]
+                },
+                "description": "Get an encrypted, presigned download URL for the case PDF.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\n`data.pdfUrl` is ciphertext, not a URL you can fetch directly. It wraps a presigned S3 link that expires after `data.expiresIn` seconds, which is 3600. Decryption uses a case specific key and is handled by the CourtMesh SDKs.\n\nReturns 404 with \"PDF not available for this case\" when the case record has no stored document."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"PDF not available for this case\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Analysis",
+      "description": "Read stored AI analysis and trigger new analysis, per document or across a whole matter.",
+      "item": [
+        {
+          "name": "Get case analysis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{caseId}}/analysis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cases",
+                "{{caseId}}",
+                "analysis"
+              ]
+            },
+            "description": "Read the stored AI analysis for a case. This endpoint never triggers analysis, it only reads what is already stored.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nWhen no analysis exists, `data` is `{ id, caseNumber, hasAnalysis: false, message }` and `meta.note` tells you to call POST /cases/{id}/analyze.\n\nWhen one exists, `data.hasAnalysis` is true and `data.analysis` carries: `summary`, `detailedSummary`, `comprehensiveSummary`, `headnote`, `holding`, `keyFacts`, `issues` as an array of `{ question, holding }`, `courtsReasoning`, `citedCases` as `{ followed, distinguished, overruled, referred }`, `precedentRelationships`, `arguments` as `{ petitioner, respondent }`, `practiceAreas`, `subCategories`, `tags`, `procedureType`, `precedentValue`, `legalPrinciples`, `doctrinesApplied`, `statutoryInterpretation` and `constitutionalProvisions`. Keys with no value are removed.\n\nAll free text in this response is watermarked per API key holder."
+          },
+          "response": [
+            {
+              "name": "200 Analysis available",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analysis",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analysis"
+                  ]
+                },
+                "description": "Read the stored AI analysis for a case. This endpoint never triggers analysis, it only reads what is already stored.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nWhen no analysis exists, `data` is `{ id, caseNumber, hasAnalysis: false, message }` and `meta.note` tells you to call POST /cases/{id}/analyze.\n\nWhen one exists, `data.hasAnalysis` is true and `data.analysis` carries: `summary`, `detailedSummary`, `comprehensiveSummary`, `headnote`, `holding`, `keyFacts`, `issues` as an array of `{ question, holding }`, `courtsReasoning`, `citedCases` as `{ followed, distinguished, overruled, referred }`, `precedentRelationships`, `arguments` as `{ petitioner, respondent }`, `practiceAreas`, `subCategories`, `tags`, `procedureType`, `precedentValue`, `legalPrinciples`, `doctrinesApplied`, `statutoryInterpretation` and `constitutionalProvisions`. Keys with no value are removed.\n\nAll free text in this response is watermarked per API key holder."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n    \"caseNumber\": \"WP/13424/2018\",\n    \"hasAnalysis\": true,\n    \"analysis\": {\n      \"summary\": \"The court held that a trade licence cannot be cancelled without a prior show cause notice.\",\n      \"detailedSummary\": \"The petitioner held a trade licence issued in 2014. The licence was cancelled by an order dated 2 August 2018 without any prior notice. The court examined the statutory scheme and held that the power of cancellation carries an implied duty to hear the affected party.\",\n      \"comprehensiveSummary\": \"Facts, submissions, statutory scheme, reasoning and conclusion set out at length, with the operative direction remitting the matter for a fresh hearing.\",\n      \"headnote\": \"Administrative law. Cancellation of trade licence. Audi alteram partem. Order quashed and remitted.\",\n      \"holding\": \"The impugned cancellation order is quashed. The respondent may proceed afresh after issuing a show cause notice.\",\n      \"keyFacts\": [\n        \"Trade licence issued to the petitioner in 2014.\",\n        \"Licence cancelled by order dated 2 August 2018.\",\n        \"No show cause notice was issued before cancellation.\"\n      ],\n      \"issues\": [\n        {\n          \"question\": \"Whether a trade licence can be cancelled without a prior show cause notice.\",\n          \"holding\": \"No. The duty to hear is implied into the power of cancellation.\"\n        }\n      ],\n      \"courtsReasoning\": \"Where a statute confers a power that affects civil consequences, the requirement of a hearing is read into the provision unless it is expressly excluded.\",\n      \"citedCases\": {\n        \"followed\": [\n          \"Maneka Gandhi vs Union Of India\"\n        ],\n        \"distinguished\": [],\n        \"overruled\": [],\n        \"referred\": [\n          \"Olga Tellis vs Bombay Municipal Corporation\"\n        ]\n      },\n      \"precedentRelationships\": \"Follows the settled line on implied natural justice in licensing decisions.\",\n      \"arguments\": {\n        \"petitioner\": [\n          \"No notice was served before the cancellation.\",\n          \"The order records no reasons.\"\n        ],\n        \"respondent\": [\n          \"The licence was cancelled for repeated statutory breaches.\",\n          \"An appellate remedy was available.\"\n        ]\n      },\n      \"practiceAreas\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"subCategories\": [\n        \"Writ Jurisdiction\",\n        \"Natural Justice\"\n      ],\n      \"tags\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"procedureType\": \"Writ Petition\",\n      \"precedentValue\": \"Persuasive\",\n      \"legalPrinciples\": [\n        \"A power affecting civil consequences carries an implied duty to hear.\",\n        \"Reasons are an essential component of a valid administrative order.\"\n      ],\n      \"doctrinesApplied\": [\n        \"Audi alteram partem\",\n        \"Doctrine of implied hearing\"\n      ],\n      \"statutoryInterpretation\": \"Section 313 of the municipal statute read as subject to the principles of natural justice.\",\n      \"constitutionalProvisions\": [\n        \"Article 14\",\n        \"Article 226\"\n      ]\n    }\n  },\n  \"meta\": {\n    \"responseTime\": \"63ms\",\n    \"note\": \"\"\n  }\n}"
+            },
+            {
+              "name": "200 No analysis yet",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analysis",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analysis"
+                  ]
+                },
+                "description": "Read the stored AI analysis for a case. This endpoint never triggers analysis, it only reads what is already stored.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nWhen no analysis exists, `data` is `{ id, caseNumber, hasAnalysis: false, message }` and `meta.note` tells you to call POST /cases/{id}/analyze.\n\nWhen one exists, `data.hasAnalysis` is true and `data.analysis` carries: `summary`, `detailedSummary`, `comprehensiveSummary`, `headnote`, `holding`, `keyFacts`, `issues` as an array of `{ question, holding }`, `courtsReasoning`, `citedCases` as `{ followed, distinguished, overruled, referred }`, `precedentRelationships`, `arguments` as `{ petitioner, respondent }`, `practiceAreas`, `subCategories`, `tags`, `procedureType`, `precedentValue`, `legalPrinciples`, `doctrinesApplied`, `statutoryInterpretation` and `constitutionalProvisions`. Keys with no value are removed.\n\nAll free text in this response is watermarked per API key holder."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n    \"caseNumber\": \"WP/13424/2018\",\n    \"hasAnalysis\": false,\n    \"message\": \"AI analysis not available for this case\"\n  },\n  \"meta\": {\n    \"responseTime\": \"41ms\",\n    \"note\": \"Use POST /cases/:id/analyze to generate AI analysis\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Analyze case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{caseId}}/analyze",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cases",
+                "{{caseId}}",
+                "analyze"
+              ]
+            },
+            "description": "Queue AI analysis for one case. The call returns immediately with 202 and the work continues in the background.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false. Send `true` to re-run analysis on a case that already has one.\n\nResponses:\n- 202 when the job was queued. `data` is `{ message: \"Analysis has been started\", status: \"processing\" }`. Poll GET /cases/{id} and watch `hasAnalysis`, or read GET /cases/{id}/analysis, after 30 to 60 seconds.\n- 200 when an analysis already exists and `force` was not set. `data` is `{ message: \"Analysis already exists\", analysis: { ... }, alreadyExists: true }`.\n- 400 when the case has neither at least 100 characters of stored text nor an attached document.\n\nThe analysis runs against the stored judgment PDF when one is available, and falls back to the extracted text otherwise.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"force\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Analysis started",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analyze",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analyze"
+                  ]
+                },
+                "description": "Queue AI analysis for one case. The call returns immediately with 202 and the work continues in the background.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false. Send `true` to re-run analysis on a case that already has one.\n\nResponses:\n- 202 when the job was queued. `data` is `{ message: \"Analysis has been started\", status: \"processing\" }`. Poll GET /cases/{id} and watch `hasAnalysis`, or read GET /cases/{id}/analysis, after 30 to 60 seconds.\n- 200 when an analysis already exists and `force` was not set. `data` is `{ message: \"Analysis already exists\", analysis: { ... }, alreadyExists: true }`.\n- 400 when the case has neither at least 100 characters of stored text nor an attached document.\n\nThe analysis runs against the stored judgment PDF when one is available, and falls back to the extracted text otherwise.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"force\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"message\": \"Analysis has been started\",\n    \"status\": \"processing\"\n  },\n  \"meta\": {\n    \"responseTime\": \"88ms\",\n    \"note\": \"You can check the analysis status by calling the GET /cases/:id endpoint in 30-60 seconds.\"\n  }\n}"
+            },
+            {
+              "name": "200 Analysis already exists",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analyze",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analyze"
+                  ]
+                },
+                "description": "Queue AI analysis for one case. The call returns immediately with 202 and the work continues in the background.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false. Send `true` to re-run analysis on a case that already has one.\n\nResponses:\n- 202 when the job was queued. `data` is `{ message: \"Analysis has been started\", status: \"processing\" }`. Poll GET /cases/{id} and watch `hasAnalysis`, or read GET /cases/{id}/analysis, after 30 to 60 seconds.\n- 200 when an analysis already exists and `force` was not set. `data` is `{ message: \"Analysis already exists\", analysis: { ... }, alreadyExists: true }`.\n- 400 when the case has neither at least 100 characters of stored text nor an attached document.\n\nThe analysis runs against the stored judgment PDF when one is available, and falls back to the extracted text otherwise.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"force\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"message\": \"Analysis already exists\",\n    \"analysis\": {\n      \"summary\": \"The court held that a trade licence cannot be cancelled without a prior show cause notice.\",\n      \"detailedSummary\": \"The petitioner held a trade licence issued in 2014. The licence was cancelled by an order dated 2 August 2018 without any prior notice. The court examined the statutory scheme and held that the power of cancellation carries an implied duty to hear the affected party.\",\n      \"comprehensiveSummary\": \"Facts, submissions, statutory scheme, reasoning and conclusion set out at length, with the operative direction remitting the matter for a fresh hearing.\",\n      \"headnote\": \"Administrative law. Cancellation of trade licence. Audi alteram partem. Order quashed and remitted.\",\n      \"holding\": \"The impugned cancellation order is quashed. The respondent may proceed afresh after issuing a show cause notice.\",\n      \"keyFacts\": [\n        \"Trade licence issued to the petitioner in 2014.\",\n        \"Licence cancelled by order dated 2 August 2018.\",\n        \"No show cause notice was issued before cancellation.\"\n      ],\n      \"issues\": [\n        {\n          \"question\": \"Whether a trade licence can be cancelled without a prior show cause notice.\",\n          \"holding\": \"No. The duty to hear is implied into the power of cancellation.\"\n        }\n      ],\n      \"courtsReasoning\": \"Where a statute confers a power that affects civil consequences, the requirement of a hearing is read into the provision unless it is expressly excluded.\",\n      \"citedCases\": {\n        \"followed\": [\n          \"Maneka Gandhi vs Union Of India\"\n        ],\n        \"distinguished\": [],\n        \"overruled\": [],\n        \"referred\": [\n          \"Olga Tellis vs Bombay Municipal Corporation\"\n        ]\n      },\n      \"precedentRelationships\": \"Follows the settled line on implied natural justice in licensing decisions.\",\n      \"arguments\": {\n        \"petitioner\": [\n          \"No notice was served before the cancellation.\",\n          \"The order records no reasons.\"\n        ],\n        \"respondent\": [\n          \"The licence was cancelled for repeated statutory breaches.\",\n          \"An appellate remedy was available.\"\n        ]\n      },\n      \"practiceAreas\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"subCategories\": [\n        \"Writ Jurisdiction\",\n        \"Natural Justice\"\n      ],\n      \"tags\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"procedureType\": \"Writ Petition\",\n      \"precedentValue\": \"Persuasive\",\n      \"legalPrinciples\": [\n        \"A power affecting civil consequences carries an implied duty to hear.\",\n        \"Reasons are an essential component of a valid administrative order.\"\n      ],\n      \"doctrinesApplied\": [\n        \"Audi alteram partem\",\n        \"Doctrine of implied hearing\"\n      ],\n      \"statutoryInterpretation\": \"Section 313 of the municipal statute read as subject to the principles of natural justice.\",\n      \"constitutionalProvisions\": [\n        \"Article 14\",\n        \"Article 226\"\n      ]\n    },\n    \"alreadyExists\": true\n  },\n  \"meta\": {\n    \"responseTime\": \"71ms\"\n  }\n}"
+            },
+            {
+              "name": "400 Not enough content",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analyze",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analyze"
+                  ]
+                },
+                "description": "Queue AI analysis for one case. The call returns immediately with 202 and the work continues in the background.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false. Send `true` to re-run analysis on a case that already has one.\n\nResponses:\n- 202 when the job was queued. `data` is `{ message: \"Analysis has been started\", status: \"processing\" }`. Poll GET /cases/{id} and watch `hasAnalysis`, or read GET /cases/{id}/analysis, after 30 to 60 seconds.\n- 200 when an analysis already exists and `force` was not set. `data` is `{ message: \"Analysis already exists\", analysis: { ... }, alreadyExists: true }`.\n- 400 when the case has neither at least 100 characters of stored text nor an attached document.\n\nThe analysis runs against the stored judgment PDF when one is available, and falls back to the extracted text otherwise.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"force\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Case does not have sufficient content for analysis. Case must have at least 100 characters of text or documents with s3Key to generate AI analysis.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Analyze consolidated",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/{{caseId}}/analyze-consolidated",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cases",
+                "{{caseId}}",
+                "analyze-consolidated"
+              ]
+            },
+            "description": "Run a single AI analysis across the whole matter rather than one document.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false.\n\nUnlike POST /cases/{id}/analyze, this call is synchronous and can take a while. It gathers the documents first:\n- High Court matters: the current case plus its five most recent orders.\n- Supreme Court matters: up to 20 documents that share the same case number.\n\nThe combined text is capped at 100,000 characters. The result is stored, so a second call without `force` returns the stored copy with `status: \"already_analyzed\"`.\n\n`data.consolidatedAnalysis` carries the same keys as the single case analysis plus `benchComposition`, `opinionType`, `factPattern`, `linkedCases` and `outcome`.\n\nError cases: 400 when the case has no case number or no usable text, 403 when the account's AI allowance is exhausted, 404 when the case or its related documents cannot be found.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"force\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Consolidated analysis",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analyze-consolidated",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analyze-consolidated"
+                  ]
+                },
+                "description": "Run a single AI analysis across the whole matter rather than one document.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false.\n\nUnlike POST /cases/{id}/analyze, this call is synchronous and can take a while. It gathers the documents first:\n- High Court matters: the current case plus its five most recent orders.\n- Supreme Court matters: up to 20 documents that share the same case number.\n\nThe combined text is capped at 100,000 characters. The result is stored, so a second call without `force` returns the stored copy with `status: \"already_analyzed\"`.\n\n`data.consolidatedAnalysis` carries the same keys as the single case analysis plus `benchComposition`, `opinionType`, `factPattern`, `linkedCases` and `outcome`.\n\nError cases: 400 when the case has no case number or no usable text, 403 when the account's AI allowance is exhausted, 404 when the case or its related documents cannot be found.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"force\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"success\",\n    \"consolidatedAnalysis\": {\n      \"summary\": \"The court held that a trade licence cannot be cancelled without a prior show cause notice.\",\n      \"detailedSummary\": \"The petitioner held a trade licence issued in 2014. The licence was cancelled by an order dated 2 August 2018 without any prior notice. The court examined the statutory scheme and held that the power of cancellation carries an implied duty to hear the affected party.\",\n      \"comprehensiveSummary\": \"Facts, submissions, statutory scheme, reasoning and conclusion set out at length, with the operative direction remitting the matter for a fresh hearing.\",\n      \"headnote\": \"Administrative law. Cancellation of trade licence. Audi alteram partem. Order quashed and remitted.\",\n      \"holding\": \"The impugned cancellation order is quashed. The respondent may proceed afresh after issuing a show cause notice.\",\n      \"keyFacts\": [\n        \"Trade licence issued to the petitioner in 2014.\",\n        \"Licence cancelled by order dated 2 August 2018.\",\n        \"No show cause notice was issued before cancellation.\"\n      ],\n      \"issues\": [\n        {\n          \"question\": \"Whether a trade licence can be cancelled without a prior show cause notice.\",\n          \"holding\": \"No. The duty to hear is implied into the power of cancellation.\"\n        }\n      ],\n      \"courtsReasoning\": \"Where a statute confers a power that affects civil consequences, the requirement of a hearing is read into the provision unless it is expressly excluded.\",\n      \"citedCases\": {\n        \"followed\": [\n          \"Maneka Gandhi vs Union Of India\"\n        ],\n        \"distinguished\": [],\n        \"overruled\": [],\n        \"referred\": [\n          \"Olga Tellis vs Bombay Municipal Corporation\"\n        ]\n      },\n      \"precedentRelationships\": \"Follows the settled line on implied natural justice in licensing decisions.\",\n      \"arguments\": {\n        \"petitioner\": [\n          \"No notice was served before the cancellation.\",\n          \"The order records no reasons.\"\n        ],\n        \"respondent\": [\n          \"The licence was cancelled for repeated statutory breaches.\",\n          \"An appellate remedy was available.\"\n        ]\n      },\n      \"practiceAreas\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"subCategories\": [\n        \"Writ Jurisdiction\",\n        \"Natural Justice\"\n      ],\n      \"tags\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"procedureType\": \"Writ Petition\",\n      \"precedentValue\": \"Persuasive\",\n      \"legalPrinciples\": [\n        \"A power affecting civil consequences carries an implied duty to hear.\",\n        \"Reasons are an essential component of a valid administrative order.\"\n      ],\n      \"doctrinesApplied\": [\n        \"Audi alteram partem\",\n        \"Doctrine of implied hearing\"\n      ],\n      \"statutoryInterpretation\": \"Section 313 of the municipal statute read as subject to the principles of natural justice.\",\n      \"constitutionalProvisions\": [\n        \"Article 14\",\n        \"Article 226\"\n      ],\n      \"outcome\": \"The impugned cancellation order is quashed.\",\n      \"benchComposition\": \"Division Bench\",\n      \"opinionType\": \"Unanimous\",\n      \"factPattern\": \"Licence holder deprived of a livelihood by an unreasoned administrative order.\",\n      \"linkedCases\": [\n        \"WP/13424/2018\",\n        \"CA/882/2021\"\n      ]\n    },\n    \"message\": \"Consolidated AI analysis completed successfully\"\n  },\n  \"meta\": {\n    \"responseTime\": \"31204ms\",\n    \"relatedCases\": 1\n  }\n}"
+            },
+            {
+              "name": "200 Already analyzed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analyze-consolidated",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analyze-consolidated"
+                  ]
+                },
+                "description": "Run a single AI analysis across the whole matter rather than one document.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false.\n\nUnlike POST /cases/{id}/analyze, this call is synchronous and can take a while. It gathers the documents first:\n- High Court matters: the current case plus its five most recent orders.\n- Supreme Court matters: up to 20 documents that share the same case number.\n\nThe combined text is capped at 100,000 characters. The result is stored, so a second call without `force` returns the stored copy with `status: \"already_analyzed\"`.\n\n`data.consolidatedAnalysis` carries the same keys as the single case analysis plus `benchComposition`, `opinionType`, `factPattern`, `linkedCases` and `outcome`.\n\nError cases: 400 when the case has no case number or no usable text, 403 when the account's AI allowance is exhausted, 404 when the case or its related documents cannot be found.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"force\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"already_analyzed\",\n    \"consolidatedAnalysis\": {\n      \"summary\": \"The court held that a trade licence cannot be cancelled without a prior show cause notice.\",\n      \"detailedSummary\": \"The petitioner held a trade licence issued in 2014. The licence was cancelled by an order dated 2 August 2018 without any prior notice. The court examined the statutory scheme and held that the power of cancellation carries an implied duty to hear the affected party.\",\n      \"comprehensiveSummary\": \"Facts, submissions, statutory scheme, reasoning and conclusion set out at length, with the operative direction remitting the matter for a fresh hearing.\",\n      \"headnote\": \"Administrative law. Cancellation of trade licence. Audi alteram partem. Order quashed and remitted.\",\n      \"holding\": \"The impugned cancellation order is quashed. The respondent may proceed afresh after issuing a show cause notice.\",\n      \"keyFacts\": [\n        \"Trade licence issued to the petitioner in 2014.\",\n        \"Licence cancelled by order dated 2 August 2018.\",\n        \"No show cause notice was issued before cancellation.\"\n      ],\n      \"issues\": [\n        {\n          \"question\": \"Whether a trade licence can be cancelled without a prior show cause notice.\",\n          \"holding\": \"No. The duty to hear is implied into the power of cancellation.\"\n        }\n      ],\n      \"courtsReasoning\": \"Where a statute confers a power that affects civil consequences, the requirement of a hearing is read into the provision unless it is expressly excluded.\",\n      \"citedCases\": {\n        \"followed\": [\n          \"Maneka Gandhi vs Union Of India\"\n        ],\n        \"distinguished\": [],\n        \"overruled\": [],\n        \"referred\": [\n          \"Olga Tellis vs Bombay Municipal Corporation\"\n        ]\n      },\n      \"precedentRelationships\": \"Follows the settled line on implied natural justice in licensing decisions.\",\n      \"arguments\": {\n        \"petitioner\": [\n          \"No notice was served before the cancellation.\",\n          \"The order records no reasons.\"\n        ],\n        \"respondent\": [\n          \"The licence was cancelled for repeated statutory breaches.\",\n          \"An appellate remedy was available.\"\n        ]\n      },\n      \"practiceAreas\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"subCategories\": [\n        \"Writ Jurisdiction\",\n        \"Natural Justice\"\n      ],\n      \"tags\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"procedureType\": \"Writ Petition\",\n      \"precedentValue\": \"Persuasive\",\n      \"legalPrinciples\": [\n        \"A power affecting civil consequences carries an implied duty to hear.\",\n        \"Reasons are an essential component of a valid administrative order.\"\n      ],\n      \"doctrinesApplied\": [\n        \"Audi alteram partem\",\n        \"Doctrine of implied hearing\"\n      ],\n      \"statutoryInterpretation\": \"Section 313 of the municipal statute read as subject to the principles of natural justice.\",\n      \"constitutionalProvisions\": [\n        \"Article 14\",\n        \"Article 226\"\n      ],\n      \"outcome\": \"The impugned cancellation order is quashed.\",\n      \"benchComposition\": \"Division Bench\",\n      \"opinionType\": \"Unanimous\",\n      \"factPattern\": \"Licence holder deprived of a livelihood by an unreasoned administrative order.\",\n      \"linkedCases\": [\n        \"WP/13424/2018\",\n        \"CA/882/2021\"\n      ]\n    },\n    \"message\": \"Consolidated analysis already exists. Use force=true to re-analyze.\"\n  },\n  \"meta\": {\n    \"responseTime\": \"94ms\"\n  }\n}"
+            },
+            {
+              "name": "404 No related cases",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/{{caseId}}/analyze-consolidated",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "{{caseId}}",
+                    "analyze-consolidated"
+                  ]
+                },
+                "description": "Run a single AI analysis across the whole matter rather than one document.\n\nThe `id` path parameter accepts either a Mongo ObjectId string or a case number. The handler tries the ObjectId lookup first and falls back to a case number lookup.\n\nBody: `{ \"force\": false }`. `force` is optional and defaults to false.\n\nUnlike POST /cases/{id}/analyze, this call is synchronous and can take a while. It gathers the documents first:\n- High Court matters: the current case plus its five most recent orders.\n- Supreme Court matters: up to 20 documents that share the same case number.\n\nThe combined text is capped at 100,000 characters. The result is stored, so a second call without `force` returns the stored copy with `status: \"already_analyzed\"`.\n\n`data.consolidatedAnalysis` carries the same keys as the single case analysis plus `benchComposition`, `opinionType`, `factPattern`, `linkedCases` and `outcome`.\n\nError cases: 400 when the case has no case number or no usable text, 403 when the account's AI allowance is exhausted, 404 when the case or its related documents cannot be found.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"force\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"No related cases or orders found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Judges",
+      "description": "Judge name lookup for building search filters.",
+      "item": [
+        {
+          "name": "Search judges",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/judges/search?q=khanna",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "judges",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "khanna",
+                  "description": "Optional substring match on the judge name."
+                }
+              ]
+            },
+            "description": "Autocomplete over the combined Supreme Court and High Court judge name lists.\n\nQuery parameter `q` is optional. The match is a case insensitive substring match on the full judge name, and at most 50 names are returned. Sending no `q` returns the first 50 names of the combined list, which is useful for seeding a picker.\n\n`data` is a flat array of strings. Use a returned name verbatim as the `judgeName` filter on POST /search/cases."
+          },
+          "response": [
+            {
+              "name": "200 Matches",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/judges/search?q=khanna",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "judges",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "khanna",
+                      "description": "Optional substring match on the judge name."
+                    }
+                  ]
+                },
+                "description": "Autocomplete over the combined Supreme Court and High Court judge name lists.\n\nQuery parameter `q` is optional. The match is a case insensitive substring match on the full judge name, and at most 50 names are returned. Sending no `q` returns the first 50 names of the combined list, which is useful for seeding a picker.\n\n`data` is a flat array of strings. Use a returned name verbatim as the `judgeName` filter on POST /search/cases."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    \"HON'BLE MR. JUSTICE SANJIV KHANNA\",\n    \"HON'BLE MR. JUSTICE V. KHANNA\"\n  ],\n  \"meta\": {\n    \"query\": \"khanna\",\n    \"responseTime\": \"6ms\",\n    \"totalMatches\": 2\n  }\n}"
+            },
+            {
+              "name": "500 Judge data missing",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/judges/search?q=khanna",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "judges",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "khanna",
+                      "description": "Optional substring match on the judge name."
+                    }
+                  ]
+                },
+                "description": "Autocomplete over the combined Supreme Court and High Court judge name lists.\n\nQuery parameter `q` is optional. The match is a case insensitive substring match on the full judge name, and at most 50 names are returned. Sending no `q` returns the first 50 names of the combined list, which is useful for seeding a picker.\n\n`data` is a flat array of strings. Use a returned name verbatim as the `judgeName` filter on POST /search/cases."
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Judge data files are missing\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Timeline",
+      "description": "Fetch order sheets and hearing history for a case. This is a two step, asynchronous flow.",
+      "item": [
+        {
+          "name": "Request timeline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/request-timeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "request-timeline"
+              ]
+            },
+            "description": "Ask CourtMesh to pull the order sheet and hearing history for a case from the source court.\n\nBody: `{ \"case_id\": \"<Mongo ObjectId>\" }`. `case_id` is required. It must be an ObjectId string, a case number will not work here.\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `_id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasS3Key`, `s3Key` and `s3Bucket`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"case_id\": \"{{caseId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Job queued",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/request-timeline",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "request-timeline"
+                  ]
+                },
+                "description": "Ask CourtMesh to pull the order sheet and hearing history for a case from the source court.\n\nBody: `{ \"case_id\": \"<Mongo ObjectId>\" }`. `case_id` is required. It must be an ObjectId string, a case number will not work here.\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `_id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasS3Key`, `s3Key` and `s3Bucket`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"case_id\": \"{{caseId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"requestId\": \"6710c9a71f3b8d2e5c001122\",\n    \"status\": \"pending\"\n  },\n  \"meta\": {\n    \"responseTime\": \"142ms\"\n  }\n}"
+            },
+            {
+              "name": "200 Cached orders",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/request-timeline",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "request-timeline"
+                  ]
+                },
+                "description": "Ask CourtMesh to pull the order sheet and hearing history for a case from the source court.\n\nBody: `{ \"case_id\": \"<Mongo ObjectId>\" }`. `case_id` is required. It must be an ObjectId string, a case number will not work here.\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `_id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasS3Key`, `s3Key` and `s3Bucket`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"case_id\": \"{{caseId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"requestId\": \"6710c9a71f3b8d2e5c001122\",\n    \"status\": \"completed\",\n    \"cached\": true,\n    \"message\": \"Orders already fetched today\",\n    \"orderCount\": 2,\n    \"orders\": [\n      {\n        \"_id\": \"6710c9a71f3b8d2e5c0011aa\",\n        \"title\": \"Order #1\",\n        \"caseNumber\": \"WP/13424/2018\",\n        \"decisionDate\": \"2020-01-12T00:00:00.000Z\",\n        \"court\": \"Bombay High Court\",\n        \"caseType\": \"Order\",\n        \"disposalNature\": \"Adjourned\",\n        \"judges\": [\n          \"Hon'ble Mr. Justice A. S. Deshpande\"\n        ],\n        \"judge\": \"Hon'ble Mr. Justice A. S. Deshpande\",\n        \"petitioners\": [\n          \"Ramesh Kumar Traders\"\n        ],\n        \"respondents\": [\n          \"State Of Maharashtra\"\n        ],\n        \"hasS3Key\": true,\n        \"s3Key\": \"hc/bombay/orders/wp-13424-2018-1.pdf\",\n        \"s3Bucket\": \"courtmesh-documents\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"responseTime\": \"203ms\"\n  }\n}"
+            },
+            {
+              "name": "400 case_id missing",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/request-timeline",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "request-timeline"
+                  ]
+                },
+                "description": "Ask CourtMesh to pull the order sheet and hearing history for a case from the source court.\n\nBody: `{ \"case_id\": \"<Mongo ObjectId>\" }`. `case_id` is required. It must be an ObjectId string, a case number will not work here.\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `_id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasS3Key`, `s3Key` and `s3Bucket`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"case_id\": \"{{caseId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"case_id is required\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get timeline",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/get-timeline/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "get-timeline",
+                "{{requestId}}"
+              ]
+            },
+            "description": "Poll the job created by POST /request-timeline.\n\nThe `requestId` path parameter is the `requestId` from that call.\n\n`data.status` moves through `pending`, `processing`, `completed` or `failed`, depending on the source court's availability. `data` also carries `createdAt` and `updatedAt`, plus `startedAt`, `completedAt`, `error`, `result`, `orders`, `orderCount` and `totalOrderCount` when they apply. `result` is omitted whenever `totalOrderCount` is present.\n\nPoll politely. The API key bucket allows 10 requests per minute, so a few seconds between polls is sensible."
+          },
+          "response": [
+            {
+              "name": "200 Completed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/get-timeline/{{requestId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "get-timeline",
+                    "{{requestId}}"
+                  ]
+                },
+                "description": "Poll the job created by POST /request-timeline.\n\nThe `requestId` path parameter is the `requestId` from that call.\n\n`data.status` moves through `pending`, `processing`, `completed` or `failed`, depending on the source court's availability. `data` also carries `createdAt` and `updatedAt`, plus `startedAt`, `completedAt`, `error`, `result`, `orders`, `orderCount` and `totalOrderCount` when they apply. `result` is omitted whenever `totalOrderCount` is present.\n\nPoll politely. The API key bucket allows 10 requests per minute, so a few seconds between polls is sensible."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"requestId\": \"6710c9a71f3b8d2e5c001122\",\n    \"status\": \"completed\",\n    \"createdAt\": \"2026-08-10T08:59:01.114Z\",\n    \"updatedAt\": \"2026-08-10T08:59:48.902Z\",\n    \"startedAt\": \"2026-08-10T08:59:02.001Z\",\n    \"completedAt\": \"2026-08-10T08:59:48.900Z\",\n    \"orderCount\": 2,\n    \"totalOrderCount\": 2\n  },\n  \"meta\": {\n    \"responseTime\": \"27ms\"\n  }\n}"
+            },
+            {
+              "name": "200 Pending",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/get-timeline/{{requestId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "get-timeline",
+                    "{{requestId}}"
+                  ]
+                },
+                "description": "Poll the job created by POST /request-timeline.\n\nThe `requestId` path parameter is the `requestId` from that call.\n\n`data.status` moves through `pending`, `processing`, `completed` or `failed`, depending on the source court's availability. `data` also carries `createdAt` and `updatedAt`, plus `startedAt`, `completedAt`, `error`, `result`, `orders`, `orderCount` and `totalOrderCount` when they apply. `result` is omitted whenever `totalOrderCount` is present.\n\nPoll politely. The API key bucket allows 10 requests per minute, so a few seconds between polls is sensible."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"requestId\": \"6710c9a71f3b8d2e5c001122\",\n    \"status\": \"pending\",\n    \"createdAt\": \"2026-08-10T08:59:01.114Z\",\n    \"updatedAt\": \"2026-08-10T08:59:01.114Z\"\n  },\n  \"meta\": {\n    \"responseTime\": \"19ms\"\n  }\n}"
+            },
+            {
+              "name": "404 Request not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/get-timeline/{{requestId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "get-timeline",
+                    "{{requestId}}"
+                  ]
+                },
+                "description": "Poll the job created by POST /request-timeline.\n\nThe `requestId` path parameter is the `requestId` from that call.\n\n`data.status` moves through `pending`, `processing`, `completed` or `failed`, depending on the source court's availability. `data` also carries `createdAt` and `updatedAt`, plus `startedAt`, `completedAt`, `error`, `result`, `orders`, `orderCount` and `totalOrderCount` when they apply. `result` is omitted whenever `totalOrderCount` is present.\n\nPoll politely. The API key bucket allows 10 requests per minute, so a few seconds between polls is sensible."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Request not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "description": "Service status.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Liveness check. This is the only endpoint that does not require an API key and it is not rate limited.\n\nNote that the response is not wrapped in the usual `data` envelope, the fields sit at the top level.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 Healthy",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                },
+                "description": "Liveness check. This is the only endpoint that does not require an API key and it is not rate limited.\n\nNote that the response is not wrapped in the usual `data` envelope, the fields sit at the top level.",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"status\": \"healthy\",\n  \"version\": \"1.0.0\",\n  \"timestamp\": \"2026-08-10T09:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
