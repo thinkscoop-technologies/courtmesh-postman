@@ -16,7 +16,35 @@
       }
     ]
   },
-  "event": [],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Minimal smoke assertions applied to every request in this collection.",
+          "// The collection previously shipped with zero test scripts; this restores",
+          "// a baseline automated check without hand-authoring per-endpoint assertions.",
+          "pm.test(\"status code is a documented HTTP status\", function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 401, 402, 403, 404, 408, 409, 413, 429, 500, 502, 503]);",
+          "});",
+          "",
+          "pm.test(\"X-Request-Id response header is present\", function () {",
+          "    pm.response.to.have.header(\"X-Request-Id\");",
+          "});",
+          "",
+          "if (pm.response.code >= 400) {",
+          "    pm.test(\"error response is JSON and carries an error/message field\", function () {",
+          "        const json = pm.response.json();",
+          "        pm.expect(json).to.satisfy(function (body) {",
+          "            return typeof body.error === \"string\" || typeof body.message === \"string\";",
+          "        });",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
   "variable": [
     {
       "key": "baseUrl",
@@ -135,7 +163,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"mongoId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"title\": \"Ramesh Kumar Traders vs State Of Maharashtra\",\n      \"titleRaw\": \"WP/13424/2018 of Ramesh Kumar Traders vs State Of Maharashtra\",\n      \"summary\": \"Writ petition challenging the cancellation of a trade licence without a hearing.\",\n      \"headnote\": \"Natural justice. Licence cancelled without notice. Order set aside.\",\n      \"petitioners\": [\n        \"Ramesh Kumar Traders\"\n      ],\n      \"respondents\": [\n        \"State Of Maharashtra\",\n        \"Municipal Commissioner\"\n      ],\n      \"parties_all\": [\n        \"Ramesh Kumar Traders\",\n        \"State Of Maharashtra\"\n      ],\n      \"judges\": [\n        \"Hon'ble Mr. Justice A. S. Deshpande\"\n      ],\n      \"advocates\": [\n        \"Mr. P. R. Nair\",\n        \"Ms. S. Iyer\"\n      ],\n      \"caseNumber\": \"WP/13424/2018\",\n      \"extracted_citations\": [\n        \"(2016) 4 SCC 155\"\n      ],\n      \"cited_sections\": [\n        \"CONST 226\"\n      ],\n      \"courtType\": \"High Court\",\n      \"court\": \"Bombay High Court\",\n      \"courtName\": \"Original Side\",\n      \"caseType\": \"WP\",\n      \"caseTypeFullForm\": \"Writ Petition\",\n      \"caseStatus\": \"Disposed\",\n      \"caseYear\": 2021,\n      \"registrationYear\": 2018,\n      \"cnr\": \"MHHC010123452018\",\n      \"source\": \"hc\",\n      \"decisionDate\": \"2021-03-11\",\n      \"registrationDate\": \"2018-08-02\",\n      \"citation\": \"2021 SCC OnLine Bom 512\",\n      \"disposalNature\": \"Allowed\",\n      \"hasDocuments\": true,\n      \"documentTypes\": [\n        \"Judgment\"\n      ],\n      \"practiceAreas\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"precedentValue\": \"Persuasive\",\n      \"createdAt\": \"2024-11-02T06:41:18.220Z\",\n      \"updatedAt\": \"2025-06-19T11:02:44.881Z\",\n      \"_id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"_score\": 38.41207,\n      \"_sort\": [\n        38.41207,\n        \"6710b2f4a1c9e2d3f4a5b6c7\"\n      ]\n    }\n  ],\n  \"meta\": {\n    \"query\": \"trade licence cancelled without notice\",\n    \"filters\": {\n      \"court\": \"Bombay High Court\",\n      \"year\": 2021,\n      \"caseType\": \"WP\",\n      \"caseNumber\": null,\n      \"judgeName\": \"Deshpande\",\n      \"fromDate\": \"2020-01-01\",\n      \"toDate\": \"2021-12-31\"\n    },\n    \"responseTime\": \"412ms\"\n  },\n  \"pagination\": {\n    \"total\": 137,\n    \"hasMore\": true,\n    \"page\": 1,\n    \"limit\": 20,\n    \"nextCursor\": \"eyJzYSI6WzM4LjQxMjA3LCI2NzEwYjJmNGExYzllMmQzZjRhNWI2YzciXSwiZGVwdGgiOjIwLCJxIjoiOWY0YTJjMWUifQ.7f0a1c3e9b2d4f6a8c1e3b5d7f9a0c2e\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"mongoId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"title\": \"Ramesh Kumar Traders vs State Of Maharashtra\",\n      \"titleRaw\": \"WP/13424/2018 of Ramesh Kumar Traders vs State Of Maharashtra\",\n      \"summary\": \"Writ petition challenging the cancellation of a trade licence without a hearing.\",\n      \"headnote\": \"Natural justice. Licence cancelled without notice. Order set aside.\",\n      \"petitioners\": [\n        \"Ramesh Kumar Traders\"\n      ],\n      \"respondents\": [\n        \"State Of Maharashtra\",\n        \"Municipal Commissioner\"\n      ],\n      \"parties_all\": [\n        \"Ramesh Kumar Traders\",\n        \"State Of Maharashtra\"\n      ],\n      \"judges\": [\n        \"Hon'ble Mr. Justice A. S. Deshpande\"\n      ],\n      \"advocates\": [\n        \"Mr. P. R. Nair\",\n        \"Ms. S. Iyer\"\n      ],\n      \"caseNumber\": \"WP/13424/2018\",\n      \"extracted_citations\": [\n        \"(2016) 4 SCC 155\"\n      ],\n      \"cited_sections\": [\n        \"CONST 226\"\n      ],\n      \"courtType\": \"High Court\",\n      \"court\": \"Bombay High Court\",\n      \"courtName\": \"Original Side\",\n      \"caseType\": \"WP\",\n      \"caseTypeFullForm\": \"Writ Petition\",\n      \"caseStatus\": \"Disposed\",\n      \"caseYear\": 2021,\n      \"registrationYear\": 2018,\n      \"cnr\": \"MHHC010123452018\",\n      \"source\": \"hc\",\n      \"decisionDate\": \"2021-03-11\",\n      \"registrationDate\": \"2018-08-02\",\n      \"citation\": \"2021 SCC OnLine Bom 512\",\n      \"disposalNature\": \"Allowed\",\n      \"hasDocuments\": true,\n      \"documentTypes\": [\n        \"Judgment\"\n      ],\n      \"practiceAreas\": [\n        \"Constitutional Law\",\n        \"Administrative Law\"\n      ],\n      \"precedentValue\": \"Persuasive\",\n      \"createdAt\": \"2024-11-02T06:41:18.220Z\",\n      \"updatedAt\": \"2025-06-19T11:02:44.881Z\",\n      \"_id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"_score\": 38.41207,\n      \"_sort\": [\n        38.41207,\n        \"6710b2f4a1c9e2d3f4a5b6c7\"\n      ]\n    }\n  ],\n  \"meta\": {\n    \"query\": \"trade licence cancelled without notice\",\n    \"filters\": {\n      \"court\": \"Bombay High Court\",\n      \"year\": 2021,\n      \"caseType\": \"WP\",\n      \"judgeName\": \"Deshpande\",\n      \"fromDate\": \"2020-01-01\",\n      \"toDate\": \"2021-12-31\"\n    },\n    \"responseTime\": \"412ms\"\n  },\n  \"pagination\": {\n    \"total\": 137,\n    \"hasMore\": true,\n    \"page\": 1,\n    \"limit\": 20,\n    \"nextCursor\": \"eyJzYSI6WzM4LjQxMjA3LCI2NzEwYjJmNGExYzllMmQzZjRhNWI2YzciXSwiZGVwdGgiOjIwLCJxIjoiOWY0YTJjMWUifQ.7f0a1c3e9b2d4f6a8c1e3b5d7f9a0c2e\"\n  }\n}"
             },
             {
               "name": "400 Validation failed",
@@ -229,7 +257,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"error\": \"Rate limit exceeded\",\n  \"message\": \"Too many requests. Maximum 10 requests per minute allowed.\",\n  \"retryAfter\": 37,\n  \"resetTime\": \"2026-08-10T09:15:00.000Z\"\n}"
+              "body": "{\n  \"success\": false,\n  \"error\": \"Rate limit exceeded\",\n  \"code\": \"RATE_LIMITED\",\n  \"message\": \"Too many requests. Maximum 10 requests per minute allowed.\",\n  \"requestId\": \"b6b6c1a1-4f7d-4a9a-9f21-1e6b9a2c4d3f\",\n  \"retryAfter\": 37,\n  \"resetTime\": \"2026-08-10T09:15:00.000Z\"\n}"
             },
             {
               "name": "200 Results, page 2 (cursor)",
@@ -3224,7 +3252,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"status\": \"healthy\",\n  \"version\": \"1.0.0\",\n  \"timestamp\": \"2026-08-10T09:00:00.000Z\"\n}"
+              "body": "{\n  \"success\": true,\n  \"status\": \"healthy\",\n  \"version\": \"1.2.0\",\n  \"timestamp\": \"2026-08-10T09:00:00.000Z\"\n}"
             }
           ]
         },
@@ -3296,7 +3324,7 @@
                   "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"status\": \"healthy\",\n  \"version\": \"1.4.0\",\n  \"commit\": \"703bbe2\",\n  \"checks\": {\n    \"mongo\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 12\n    },\n    \"opensearch\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 34\n    },\n    \"qdrant\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 21\n    },\n    \"redis\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 3\n    },\n    \"iam\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 45\n    }\n  },\n  \"timestamp\": \"2026-09-18T10:00:00.000Z\"\n}"
+              "body": "{\n  \"success\": true,\n  \"status\": \"healthy\",\n  \"version\": \"1.2.0\",\n  \"checks\": {\n    \"mongo\": \"ok\",\n    \"opensearch\": \"ok\",\n    \"qdrant\": \"ok\",\n    \"redis\": \"ok\",\n    \"iam\": \"ok\"\n  },\n  \"timestamp\": \"2026-09-18T10:00:00.000Z\"\n}"
             },
             {
               "name": "503 Unhealthy (a hard dependency is down)",
