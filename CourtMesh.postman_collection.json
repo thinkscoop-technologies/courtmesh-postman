@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
     "name": "CourtMesh API: Indian Court Cases",
-    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a Mongo ObjectId or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a Mongo ObjectId or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Every request for these five endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "courtmesh"
   },
@@ -41,6 +41,12 @@
       "value": "",
       "type": "string",
       "description": "A timeline job id returned by POST /request-timeline."
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string",
+      "description": "A user id for GET /audit's userId query param. Call GET /me first to get your own id."
     }
   ],
   "item": [
@@ -978,6 +984,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID. Postman's {{$guid}} dynamic variable generates a fresh UUID v4 per send, so re-sending this request from the Postman UI runs as a new call each time; paste a fixed value here instead to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -1257,6 +1268,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID. Postman's {{$guid}} dynamic variable generates a fresh UUID v4 per send, so re-sending this request from the Postman UI runs as a new call each time; paste a fixed value here instead to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -1566,6 +1582,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID. Postman's {{$guid}} dynamic variable generates a fresh UUID v4 per send, so re-sending this request from the Postman UI runs as a new call each time; paste a fixed value here instead to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -1966,6 +1987,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID. Postman's {{$guid}} dynamic variable generates a fresh UUID v4 per send, so re-sending this request from the Postman UI runs as a new call each time; paste a fixed value here instead to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -2192,6 +2218,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID. Postman's {{$guid}} dynamic variable generates a fresh UUID v4 per send, so re-sending this request from the Postman UI runs as a new call each time; paste a fixed value here instead to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -2452,6 +2483,612 @@
               "body": "{\n  \"success\": false,\n  \"code\": \"PARTY_SCREEN_LIMIT_REACHED\",\n  \"message\": \"This tier allows 10 party screens per month. Buy a credit pack or upgrade to lift the cap.\",\n  \"limit\": 10,\n  \"tier\": \"free\",\n  \"upgradeUrl\": \"https://research.courtmesh.ai/api/settings/api-keys#credits\"\n}"
             }
           ]
+        },
+        {
+          "name": "Screen a batch of parties",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/party/screen/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "party",
+                "screen",
+                "batch"
+              ]
+            },
+            "description": "Screen 1 to 25 person or company names against the case corpus in a single call: the same check as POST /party/screen, run once per item. Not available on the Free tier.\n\nBody: { items: [ { clientRef?, name, aliases?, entityType?, identifiers?, address?, knownPersons?, court?, since?, limit?, displayThreshold? } ] (1 to 25), purpose, entityType?, adjudicate?: false }. Every item field has the same rules as POST /party/screen's own body; entityType at the top level is the default applied to any item that does not set its own. purpose is required at the batch level (same DPDP note as POST /party/screen: it is the lawful basis recorded for processing every name in this batch). adjudicate is not supported in this batch form; it may only be false or omitted - LLM adjudication needs POST /party/screen, one name at a time.\n\nEach item is independently priced (100 credits on a match, 20 on none) and can independently fail without failing the rest of the batch: data.results is an array of either { clientRef?, index, ok: true, screen: <the same object POST /party/screen returns as data> } or { clientRef?, index, ok: false, error: { code, message } }. data.summary totals { items, matchesFound, noMatches, inconclusive, errors } across the batch. meta is { creditsCharged (summed across every item that ran), requestId, truncated?, truncatedReason? }.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"clientRef\": \"row-1\",\n      \"name\": \"Ramesh Kumar Traders Pvt Ltd\",\n      \"entityType\": \"company\",\n      \"identifiers\": {\n        \"gstin\": \"27AAAPZ1234C1ZV\"\n      }\n    },\n    {\n      \"clientRef\": \"row-2\",\n      \"name\": \"Sunita Sharma\",\n      \"entityType\": \"person\"\n    }\n  ],\n  \"purpose\": \"due_diligence\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Mixed results (one match, one clean)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/party/screen/batch",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "party",
+                    "screen",
+                    "batch"
+                  ]
+                },
+                "description": "Screen 1 to 25 person or company names against the case corpus in a single call: the same check as POST /party/screen, run once per item. Not available on the Free tier.\n\nBody: { items: [ { clientRef?, name, aliases?, entityType?, identifiers?, address?, knownPersons?, court?, since?, limit?, displayThreshold? } ] (1 to 25), purpose, entityType?, adjudicate?: false }. Every item field has the same rules as POST /party/screen's own body; entityType at the top level is the default applied to any item that does not set its own. purpose is required at the batch level (same DPDP note as POST /party/screen: it is the lawful basis recorded for processing every name in this batch). adjudicate is not supported in this batch form; it may only be false or omitted - LLM adjudication needs POST /party/screen, one name at a time.\n\nEach item is independently priced (100 credits on a match, 20 on none) and can independently fail without failing the rest of the batch: data.results is an array of either { clientRef?, index, ok: true, screen: <the same object POST /party/screen returns as data> } or { clientRef?, index, ok: false, error: { code, message } }. data.summary totals { items, matchesFound, noMatches, inconclusive, errors } across the batch. meta is { creditsCharged (summed across every item that ran), requestId, truncated?, truncatedReason? }.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"clientRef\": \"row-1\",\n      \"name\": \"Ramesh Kumar Traders Pvt Ltd\",\n      \"entityType\": \"company\",\n      \"identifiers\": {\n        \"gstin\": \"27AAAPZ1234C1ZV\"\n      }\n    },\n    {\n      \"clientRef\": \"row-2\",\n      \"name\": \"Sunita Sharma\",\n      \"entityType\": \"person\"\n    }\n  ],\n  \"purpose\": \"due_diligence\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"clientRef\": \"row-1\",\n        \"index\": 0,\n        \"ok\": true,\n        \"screen\": {\n          \"query\": {\n            \"name\": \"Ramesh Kumar Traders Pvt Ltd\",\n            \"aliases\": [],\n            \"entityType\": \"company\",\n            \"purpose\": \"due_diligence\",\n            \"limit\": 40,\n            \"displayThreshold\": 0.6\n          },\n          \"summary\": {\n            \"matchCount\": 1,\n            \"byBand\": {\n              \"confirmed\": 1,\n              \"probable\": 0,\n              \"possible\": 0,\n              \"unlikely\": 0\n            },\n            \"highestBand\": \"confirmed\",\n            \"verdict\": \"matches_found\"\n          },\n          \"matches\": [\n            {\n              \"caseId\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n              \"title\": \"Ramesh Kumar Traders Pvt Ltd v. State\",\n              \"court\": \"Bombay High Court\",\n              \"partyRole\": \"respondent\",\n              \"confidence\": {\n                \"band\": \"confirmed\",\n                \"score\": 0.93,\n                \"calibrated\": 0.93,\n                \"engine\": \"rules\"\n              },\n              \"evidence\": {\n                \"entityMatch\": true,\n                \"matchedFields\": [\n                  \"name\",\n                  \"gstin\"\n                ],\n                \"strategies\": [\n                  \"exact_name\"\n                ],\n                \"signals\": [\n                  {\n                    \"name\": \"gstin_match\",\n                    \"status\": \"matched\",\n                    \"weight\": \"strong\",\n                    \"evidence\": \"27AAAPZ1234C1ZV\"\n                  }\n                ],\n                \"nameSimilarity\": 0.98,\n                \"disambiguatorPresent\": true\n              },\n              \"casePageUrl\": \"https://research.courtmesh.ai/case/64f1a2b3c4d5e6f7a8b9c0d1\"\n            }\n          ],\n          \"relatedButUnverified\": [],\n          \"coverage\": {\n            \"exhaustive\": true,\n            \"exhaustiveWithinFilters\": true,\n            \"planClamped\": false,\n            \"anyStrategyErrored\": false,\n            \"strategiesRun\": [\n              \"exact_name\",\n              \"fuzzy_name\"\n            ],\n            \"someRecordsWithheld\": false\n          },\n          \"adjudicationsRun\": 0,\n          \"notice\": \"This is a records search, not a legal or compliance opinion.\"\n        }\n      },\n      {\n        \"clientRef\": \"row-2\",\n        \"index\": 1,\n        \"ok\": true,\n        \"screen\": {\n          \"query\": {\n            \"name\": \"Sunita Sharma\",\n            \"aliases\": [],\n            \"entityType\": \"person\",\n            \"purpose\": \"due_diligence\",\n            \"limit\": 40,\n            \"displayThreshold\": 0.6\n          },\n          \"summary\": {\n            \"matchCount\": 0,\n            \"byBand\": {\n              \"confirmed\": 0,\n              \"probable\": 0,\n              \"possible\": 0,\n              \"unlikely\": 0\n            },\n            \"highestBand\": null,\n            \"verdict\": \"no_matches_found\"\n          },\n          \"matches\": [],\n          \"relatedButUnverified\": [],\n          \"coverage\": {\n            \"exhaustive\": true,\n            \"exhaustiveWithinFilters\": true,\n            \"planClamped\": false,\n            \"anyStrategyErrored\": false,\n            \"strategiesRun\": [\n              \"exact_name\",\n              \"fuzzy_name\"\n            ],\n            \"someRecordsWithheld\": false\n          },\n          \"adjudicationsRun\": 0,\n          \"notice\": \"This is a records search, not a legal or compliance opinion.\"\n        }\n      }\n    ],\n    \"summary\": {\n      \"items\": 2,\n      \"matchesFound\": 1,\n      \"noMatches\": 1,\n      \"inconclusive\": 0,\n      \"errors\": 0\n    }\n  },\n  \"meta\": {\n    \"creditsCharged\": 120,\n    \"requestId\": \"8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f\"\n  }\n}"
+            },
+            {
+              "name": "402 Insufficient credits (whole batch refused pre-flight)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/party/screen/batch",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "party",
+                    "screen",
+                    "batch"
+                  ]
+                },
+                "description": "Screen 1 to 25 person or company names against the case corpus in a single call: the same check as POST /party/screen, run once per item. Not available on the Free tier.\n\nBody: { items: [ { clientRef?, name, aliases?, entityType?, identifiers?, address?, knownPersons?, court?, since?, limit?, displayThreshold? } ] (1 to 25), purpose, entityType?, adjudicate?: false }. Every item field has the same rules as POST /party/screen's own body; entityType at the top level is the default applied to any item that does not set its own. purpose is required at the batch level (same DPDP note as POST /party/screen: it is the lawful basis recorded for processing every name in this batch). adjudicate is not supported in this batch form; it may only be false or omitted - LLM adjudication needs POST /party/screen, one name at a time.\n\nEach item is independently priced (100 credits on a match, 20 on none) and can independently fail without failing the rest of the batch: data.results is an array of either { clientRef?, index, ok: true, screen: <the same object POST /party/screen returns as data> } or { clientRef?, index, ok: false, error: { code, message } }. data.summary totals { items, matchesFound, noMatches, inconclusive, errors } across the batch. meta is { creditsCharged (summed across every item that ran), requestId, truncated?, truncatedReason? }.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"clientRef\": \"row-1\",\n      \"name\": \"Ramesh Kumar Traders Pvt Ltd\",\n      \"entityType\": \"company\",\n      \"identifiers\": {\n        \"gstin\": \"27AAAPZ1234C1ZV\"\n      }\n    },\n    {\n      \"clientRef\": \"row-2\",\n      \"name\": \"Sunita Sharma\",\n      \"entityType\": \"person\"\n    }\n  ],\n  \"purpose\": \"due_diligence\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Payment Required",
+              "code": 402,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Insufficient API credits\",\n  \"code\": \"INSUFFICIENT_API_CREDITS\",\n  \"message\": \"This batch needs up to 2500 credits and the wallet has 420.\",\n  \"required\": 2500,\n  \"balance\": 420,\n  \"shortfall\": 2080,\n  \"wallet\": \"api_credits\",\n  \"walletOwner\": \"user\",\n  \"topUpUrl\": \"https://research.courtmesh.ai/api/settings/api-keys#credits\"\n}"
+            },
+            {
+              "name": "403 Not available on the Free tier",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). The same key with a different body is refused with 409 IDEMPOTENCY_KEY_REUSED; a request with this key already in flight is refused with 409 IDEMPOTENCY_IN_PROGRESS; a malformed key is refused with 400 IDEMPOTENCY_KEY_INVALID."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/party/screen/batch",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "party",
+                    "screen",
+                    "batch"
+                  ]
+                },
+                "description": "Screen 1 to 25 person or company names against the case corpus in a single call: the same check as POST /party/screen, run once per item. Not available on the Free tier.\n\nBody: { items: [ { clientRef?, name, aliases?, entityType?, identifiers?, address?, knownPersons?, court?, since?, limit?, displayThreshold? } ] (1 to 25), purpose, entityType?, adjudicate?: false }. Every item field has the same rules as POST /party/screen's own body; entityType at the top level is the default applied to any item that does not set its own. purpose is required at the batch level (same DPDP note as POST /party/screen: it is the lawful basis recorded for processing every name in this batch). adjudicate is not supported in this batch form; it may only be false or omitted - LLM adjudication needs POST /party/screen, one name at a time.\n\nEach item is independently priced (100 credits on a match, 20 on none) and can independently fail without failing the rest of the batch: data.results is an array of either { clientRef?, index, ok: true, screen: <the same object POST /party/screen returns as data> } or { clientRef?, index, ok: false, error: { code, message } }. data.summary totals { items, matchesFound, noMatches, inconclusive, errors } across the batch. meta is { creditsCharged (summed across every item that ran), requestId, truncated?, truncatedReason? }.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"clientRef\": \"row-1\",\n      \"name\": \"Ramesh Kumar Traders Pvt Ltd\",\n      \"entityType\": \"company\",\n      \"identifiers\": {\n        \"gstin\": \"27AAAPZ1234C1ZV\"\n      }\n    },\n    {\n      \"clientRef\": \"row-2\",\n      \"name\": \"Sunita Sharma\",\n      \"entityType\": \"person\"\n    }\n  ],\n  \"purpose\": \"due_diligence\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"code\": \"API_TIER_NOT_ALLOWED\",\n  \"message\": \"Batch party screening is not available on the Free tier.\",\n  \"tier\": \"free\",\n  \"upgradeUrl\": \"https://research.courtmesh.ai/api/settings/api-keys#credits\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "description": "Account introspection: usage and billing, your own identity, and your logged API calls. All three are unmetered.",
+      "item": [
+        {
+          "name": "Get usage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/usage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usage"
+              ]
+            },
+            "description": "This API key's tier, wallet balance, per period limits and per endpoint call volume for the current Asia/Kolkata calendar month. Unmetered like every other account introspection call: checking your own usage never itself consumes a credit.\n\ndata: { tier, walletOwner: { type: \"user\"|\"org\", id }, balance: { total, monthlyGrant, signupGrant, purchased }, limits: <the full per tier TIER_LIMITS object>, period: { start, end, key }, creditsUsedThisPeriod, byEndpoint: [{ endpoint, calls, credits }], subscriptionRenewsAt }."
+          },
+          "response": [
+            {
+              "name": "200 Usage snapshot",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/usage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "usage"
+                  ]
+                },
+                "description": "This API key's tier, wallet balance, per period limits and per endpoint call volume for the current Asia/Kolkata calendar month. Unmetered like every other account introspection call: checking your own usage never itself consumes a credit.\n\ndata: { tier, walletOwner: { type: \"user\"|\"org\", id }, balance: { total, monthlyGrant, signupGrant, purchased }, limits: <the full per tier TIER_LIMITS object>, period: { start, end, key }, creditsUsedThisPeriod, byEndpoint: [{ endpoint, calls, credits }], subscriptionRenewsAt }."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"tier\": \"payg\",\n    \"walletOwner\": {\n      \"type\": \"user\",\n      \"id\": \"64f0abc0000000000000001\"\n    },\n    \"balance\": {\n      \"total\": 4820,\n      \"monthlyGrant\": 0,\n      \"signupGrant\": 1000,\n      \"purchased\": 4000\n    },\n    \"limits\": {\n      \"requestsPerMinute\": 60,\n      \"requestsPerDay\": 5000,\n      \"requestsPerMonth\": 100000,\n      \"maxPageSize\": 50,\n      \"maxPaginationDepth\": 500,\n      \"distinctCaseFetchesPerDay\": 200,\n      \"pdfCallsPerMonth\": 200,\n      \"aiCallsPerMonth\": 100,\n      \"concurrentAnalyzeJobs\": 2,\n      \"apiKeys\": 5,\n      \"semanticSearchAllowed\": true,\n      \"liveFetchAllowed\": true,\n      \"liveFetchesPerDay\": 20,\n      \"analysisReadAllowed\": true,\n      \"partyScreensPerMonth\": 100\n    },\n    \"period\": {\n      \"start\": \"2026-09-01T00:00:00.000+05:30\",\n      \"end\": \"2026-09-30T23:59:59.999+05:30\",\n      \"key\": \"2026-09\"\n    },\n    \"creditsUsedThisPeriod\": 340,\n    \"byEndpoint\": [\n      {\n        \"endpoint\": \"/api/v1/prod/search/cases\",\n        \"calls\": 128,\n        \"credits\": 0\n      },\n      {\n        \"endpoint\": \"/api/v1/prod/party/screen\",\n        \"calls\": 2,\n        \"credits\": 220\n      }\n    ],\n    \"subscriptionRenewsAt\": null\n  },\n  \"meta\": {\n    \"requestId\": \"8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get my account (me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "The calling account's own id, email, name, role and (if any) organization id. Use this to get your own organizationId before calling GET /audit with organizationId."
+          },
+          "response": [
+            {
+              "name": "200 Account identity",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "me"
+                  ]
+                },
+                "description": "The calling account's own id, email, name, role and (if any) organization id. Use this to get your own organizationId before calling GET /audit with organizationId."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"userId\": \"64f0abc0000000000000001\",\n    \"email\": \"counsel@example.com\",\n    \"name\": \"A. Counsel\",\n    \"role\": \"ORG_ADMIN\",\n    \"organizationId\": \"64f0abc0000000000000099\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get audit log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit?userId={{userId}}&limit=50&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "This API key's own logged calls (or, for an org admin, an organization's), with summary stats and a top endpoints breakdown.\n\nQuery params: organizationId (must be the caller's own org, or 403), userId (must be the caller's own id, or an org admin's teammate, or 403), limit (1 to 200, default 50), offset (default 0), startDate/endDate (ISO 8601). Exactly one of organizationId/userId should be sent; call GET /me first to get your own id.\n\ndata: { hits: [{ id, userId, organizationId, endpoint, method, statusCode, responseTime, isAiAnalysis, creditsDeducted, metadata, ipAddress, userAgent, createdAt }], summary: { totalHits, totalAiAnalysisHits, avgResponseTime, successfulHits, successRate, totalCreditsDeducted }, topEndpoints: [{ endpoint, count }] }. pagination: { total, limit, offset, hasMore }."
+          },
+          "response": [
+            {
+              "name": "200 Audit log",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit?userId={{userId}}&limit=50&offset=0",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit"
+                  ],
+                  "query": [
+                    {
+                      "key": "userId",
+                      "value": "{{userId}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    },
+                    {
+                      "key": "offset",
+                      "value": "0"
+                    }
+                  ]
+                },
+                "description": "This API key's own logged calls (or, for an org admin, an organization's), with summary stats and a top endpoints breakdown.\n\nQuery params: organizationId (must be the caller's own org, or 403), userId (must be the caller's own id, or an org admin's teammate, or 403), limit (1 to 200, default 50), offset (default 0), startDate/endDate (ISO 8601). Exactly one of organizationId/userId should be sent; call GET /me first to get your own id.\n\ndata: { hits: [{ id, userId, organizationId, endpoint, method, statusCode, responseTime, isAiAnalysis, creditsDeducted, metadata, ipAddress, userAgent, createdAt }], summary: { totalHits, totalAiAnalysisHits, avgResponseTime, successfulHits, successRate, totalCreditsDeducted }, topEndpoints: [{ endpoint, count }] }. pagination: { total, limit, offset, hasMore }."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"hits\": [\n      {\n        \"id\": \"64f0abc0000000000000a01\",\n        \"userId\": \"64f0abc0000000000000001\",\n        \"endpoint\": \"/api/v1/prod/search/cases\",\n        \"method\": \"POST\",\n        \"statusCode\": 200,\n        \"responseTime\": 120,\n        \"isAiAnalysis\": false,\n        \"creditsDeducted\": 0,\n        \"createdAt\": \"2026-09-18T09:00:00.000Z\"\n      }\n    ],\n    \"summary\": {\n      \"totalHits\": 1,\n      \"totalAiAnalysisHits\": 0,\n      \"avgResponseTime\": 120,\n      \"successfulHits\": 1,\n      \"successRate\": \"100.0\",\n      \"totalCreditsDeducted\": 0\n    },\n    \"topEndpoints\": [\n      {\n        \"endpoint\": \"/api/v1/prod/search/cases\",\n        \"count\": 1\n      }\n    ]\n  },\n  \"pagination\": {\n    \"total\": 1,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"hasMore\": false\n  }\n}"
+            },
+            {
+              "name": "403 Access denied (userId not your own, and not an org admin)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit?userId={{userId}}&limit=50&offset=0",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit"
+                  ],
+                  "query": [
+                    {
+                      "key": "userId",
+                      "value": "{{userId}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    },
+                    {
+                      "key": "offset",
+                      "value": "0"
+                    }
+                  ]
+                },
+                "description": "This API key's own logged calls (or, for an org admin, an organization's), with summary stats and a top endpoints breakdown.\n\nQuery params: organizationId (must be the caller's own org, or 403), userId (must be the caller's own id, or an org admin's teammate, or 403), limit (1 to 200, default 50), offset (default 0), startDate/endDate (ISO 8601). Exactly one of organizationId/userId should be sent; call GET /me first to get your own id.\n\ndata: { hits: [{ id, userId, organizationId, endpoint, method, statusCode, responseTime, isAiAnalysis, creditsDeducted, metadata, ipAddress, userAgent, createdAt }], summary: { totalHits, totalAiAnalysisHits, avgResponseTime, successfulHits, successRate, totalCreditsDeducted }, topEndpoints: [{ endpoint, count }] }. pagination: { total, limit, offset, hasMore }."
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Access denied\",\n  \"details\": \"You can only access your own audit data\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reference",
+      "description": "Public, unauthenticated reference data backing the court and caseType filters used elsewhere in this API.",
+      "item": [
+        {
+          "name": "List reference courts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reference/courts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reference",
+                "courts"
+              ]
+            },
+            "description": "The court taxonomy accepted by the court filter on POST /search/cases, POST /search/cases/semantic and POST /party/screen: the 4 court types, the court values under each type (High Court collapsed to representative labels), and the display name(s) per court. No API key required. Cached for 1 hour server side (ETag / Cache-Control); send If-None-Match with a previous ETag to get a 304."
+          },
+          "response": [
+            {
+              "name": "200 Court hierarchy",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reference/courts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reference",
+                    "courts"
+                  ]
+                },
+                "description": "The court taxonomy accepted by the court filter on POST /search/cases, POST /search/cases/semantic and POST /party/screen: the 4 court types, the court values under each type (High Court collapsed to representative labels), and the display name(s) per court. No API key required. Cached for 1 hour server side (ETag / Cache-Control); send If-None-Match with a previous ETag to get a 304."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"courtTypes\": [\n      \"Supreme Court\",\n      \"High Court\",\n      \"District Court\",\n      \"Tribunal\"\n    ],\n    \"courtsByType\": {\n      \"Supreme Court\": [\n        \"Supreme Court of India\"\n      ],\n      \"High Court\": [\n        \"Delhi High Court\",\n        \"Bombay High Court\"\n      ],\n      \"District Court\": [\n        \"District Court\"\n      ],\n      \"Tribunal\": [\n        \"National Company Law Tribunal\"\n      ]\n    },\n    \"courtNamesByCourt\": {\n      \"Delhi High Court\": [\n        \"High Court of Delhi\"\n      ],\n      \"Bombay High Court\": [\n        \"High Court of Judicature at Bombay\"\n      ]\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List reference case types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reference/case-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reference",
+                "case-types"
+              ]
+            },
+            "description": "Every caseType value accepted by the caseType filter on POST /search/cases and POST /search/cases/semantic: a flat list, deduplicated by code (case insensitive) and sorted, each entry carrying code, fullForm, primaryType and nature. No API key required, same 1 hour cache as GET /reference/courts."
+          },
+          "response": [
+            {
+              "name": "200 Case type list",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/reference/case-types",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "reference",
+                    "case-types"
+                  ]
+                },
+                "description": "Every caseType value accepted by the caseType filter on POST /search/cases and POST /search/cases/semantic: a flat list, deduplicated by code (case insensitive) and sorted, each entry carrying code, fullForm, primaryType and nature. No API key required, same 1 hour cache as GET /reference/courts."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"code\": \"CRL.A.\",\n      \"fullForm\": \"Criminal Appeal\",\n      \"primaryType\": \"Criminal\",\n      \"nature\": \"Appellate\"\n    },\n    {\n      \"code\": \"WP(C)\",\n      \"fullForm\": \"Writ Petition (Civil)\",\n      \"primaryType\": \"Civil\",\n      \"nature\": \"Original\"\n    }\n  ]\n}"
+            }
+          ]
         }
       ]
     },
@@ -2588,6 +3225,120 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": true,\n  \"status\": \"healthy\",\n  \"version\": \"1.0.0\",\n  \"timestamp\": \"2026-08-10T09:00:00.000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Health (deep)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health?deep=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ],
+              "query": [
+                {
+                  "key": "deep",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Deep health check. The plain GET /health above is a cheap liveness probe, no dependency calls, always fast, always 200 while the process is up. Adding ?deep=1 also checks Mongo, OpenSearch, Qdrant, Redis and IAM standing (each bounded to 1 second) and returns a checks object, one entry per dependency: { status: \"ok\" | \"degraded\" | \"down\", latencyMs, error? }.\n\nstatus on this form is \"healthy\", \"degraded\" or \"unhealthy\"; HTTP 503 (status: \"unhealthy\") means a hard dependency (Mongo or OpenSearch) is down. No API key required, not rate limited beyond the public health limiter."
+          },
+          "response": [
+            {
+              "name": "200 Healthy (deep)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health?deep=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ],
+                  "query": [
+                    {
+                      "key": "deep",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Deep health check. The plain GET /health above is a cheap liveness probe, no dependency calls, always fast, always 200 while the process is up. Adding ?deep=1 also checks Mongo, OpenSearch, Qdrant, Redis and IAM standing (each bounded to 1 second) and returns a checks object, one entry per dependency: { status: \"ok\" | \"degraded\" | \"down\", latencyMs, error? }.\n\nstatus on this form is \"healthy\", \"degraded\" or \"unhealthy\"; HTTP 503 (status: \"unhealthy\") means a hard dependency (Mongo or OpenSearch) is down. No API key required, not rate limited beyond the public health limiter."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"status\": \"healthy\",\n  \"version\": \"1.4.0\",\n  \"commit\": \"703bbe2\",\n  \"checks\": {\n    \"mongo\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 12\n    },\n    \"opensearch\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 34\n    },\n    \"qdrant\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 21\n    },\n    \"redis\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 3\n    },\n    \"iam\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 45\n    }\n  },\n  \"timestamp\": \"2026-09-18T10:00:00.000Z\"\n}"
+            },
+            {
+              "name": "503 Unhealthy (a hard dependency is down)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health?deep=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ],
+                  "query": [
+                    {
+                      "key": "deep",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Deep health check. The plain GET /health above is a cheap liveness probe, no dependency calls, always fast, always 200 while the process is up. Adding ?deep=1 also checks Mongo, OpenSearch, Qdrant, Redis and IAM standing (each bounded to 1 second) and returns a checks object, one entry per dependency: { status: \"ok\" | \"degraded\" | \"down\", latencyMs, error? }.\n\nstatus on this form is \"healthy\", \"degraded\" or \"unhealthy\"; HTTP 503 (status: \"unhealthy\") means a hard dependency (Mongo or OpenSearch) is down. No API key required, not rate limited beyond the public health limiter."
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"status\": \"unhealthy\",\n  \"version\": \"1.4.0\",\n  \"commit\": \"703bbe2\",\n  \"checks\": {\n    \"mongo\": {\n      \"status\": \"down\",\n      \"latencyMs\": 1000,\n      \"error\": \"connection timed out\"\n    },\n    \"opensearch\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 34\n    },\n    \"qdrant\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 21\n    },\n    \"redis\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 3\n    },\n    \"iam\": {\n      \"status\": \"ok\",\n      \"latencyMs\": 45\n    }\n  },\n  \"timestamp\": \"2026-09-18T10:00:00.000Z\"\n}"
             }
           ]
         }

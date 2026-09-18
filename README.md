@@ -1,6 +1,6 @@
 # CourtMesh API Postman Collection
 
-A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 14 production endpoints, organised into eight folders, with request bodies, saved example responses and per request documentation.
+A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 20 production endpoints (plus the deep variant of `GET /health`), organised into ten folders, with request bodies, saved example responses and per request documentation.
 
 Base URL: `https://research.courtmesh.ai/api/v1/prod`
 
@@ -15,11 +15,13 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | Analysis | `GET /cases/{id}/analysis`, `POST /cases/{id}/analyze`, `POST /cases/{id}/analyze-consolidated` |
 | Judges | `GET /judges/search` |
 | Timeline | `POST /request-timeline`, `GET /get-timeline/{requestId}` |
-| Litigation Check | `POST /party/screen` |
+| Litigation Check | `POST /party/screen`, `POST /party/screen/batch` |
+| Account | `GET /usage`, `GET /me`, `GET /audit` |
+| Reference | `GET /reference/courts`, `GET /reference/case-types` |
 | Coverage | `GET /coverage` |
-| System | `GET /health` |
+| System | `GET /health`, `GET /health?deep=1` |
 
-47 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`) and an unavailable entitlement lookup (503).
+58 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`), an unavailable entitlement lookup (503), and a batch party screen mixing successful and failed items.
 
 ## Import and run it locally
 
@@ -30,9 +32,13 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 4. Send **Judges / Search judges**. It is the cheapest authenticated call, so it confirms your key works.
 5. Send **Search / Search cases (keyword)**, copy an `_id` from the results into the `caseId` collection variable, then work through the Cases and Analysis folders.
 
-Collection variables you may want to set: `baseUrl`, `apiKey`, `caseId`, `requestId`. Keep `apiKey` in an environment rather than in the collection so it never lands in source control.
+Collection variables you may want to set: `baseUrl`, `apiKey`, `caseId`, `requestId`, `userId`. Keep `apiKey` in an environment rather than in the collection so it never lands in source control.
 
-Auth is configured once at the collection level as a bearer token bound to `{{apiKey}}`, so every request inherits it. `GET /health` overrides that with no auth. The API also accepts `X-API-Key: <key>` if you prefer that header.
+Auth is configured once at the collection level as a bearer token bound to `{{apiKey}}`, so every request inherits it. `GET /health`, `GET /health?deep=1`, `GET /reference/courts` and `GET /reference/case-types` override that with no auth. The API also accepts `X-API-Key: <key>` if you prefer that header.
+
+### Idempotency-Key
+
+`POST /party/screen`, `POST /party/screen/batch`, `POST /cases/{id}/analyze`, `POST /cases/{id}/analyze-consolidated` and `POST /request-timeline` each carry an `Idempotency-Key` header defaulted to `{{$guid}}`, Postman's dynamic variable for a fresh UUID v4 on every send. A replayed request (same key, same body, within 24 hours) returns the original response again with no new charge (`Idempotency-Replayed: true` on the response); the same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. Because `{{$guid}}` regenerates every send, re-sending one of these requests from the Postman UI is always a fresh, separately charged call; paste a fixed value into the header to test the replay behaviour on purpose.
 
 ## Run it from the command line
 
@@ -61,7 +67,7 @@ Do this in the Postman web or desktop app while signed into the CourtMesh team w
    - Styling: set the brand colours and the CourtMesh logo.
    - Optional: enable **Run in Postman** button and the language snippets for cURL, Python requests, Node fetch, Go and PHP.
 6. **Click Publish Collection.** You get a public URL of the form `https://documenter.getpostman.com/view/<userId>/<collectionSlug>/<versionTag>`.
-7. **Verify the published page** in a private browsing window while signed out. Confirm no key is visible anywhere, that all eight folders appear, and that the saved examples render.
+7. **Verify the published page** in a private browsing window while signed out. Confirm no key is visible anywhere, that all ten folders appear, and that the saved examples render.
 8. **Submit the URL for indexing.** Add it to Google Search Console, link to it from the CourtMesh docs and website footer, and use it as the documentation link in every developer directory listing.
 
 To publish an update later: re import or edit the collection, then **View documentation**, then **Publish** again. The URL stays the same as long as you republish the same collection.
@@ -88,7 +94,7 @@ git push -u origin main
 
 These come from the API's actual behaviour, not from an idealised spec.
 
-- **Response envelope.** Everything except `GET /health` returns `{ "success": true, "data": ..., "meta": ..., "pagination": ... }`. Failures return `{ "success": false, "error": "..." }`, plus a `details` array when request validation failed. Authentication and rate limit failures come from middleware and are a bare `{ "error": "..." }` with no `success` key.
+- **Response envelope.** Everything except `GET /health` returns `{ "success": true, "data": ..., "meta": ..., "pagination": ... }`. Failures return `{ "success": false, "error": "..." }`, plus a `details` array when request validation failed. Authentication and rate limit failures come from middleware and are a bare `{ "error": "..." }` with no `success` key. Every response, success or failure, also carries an `X-Request-Id` response header; some endpoints (`GET /usage`, `POST /party/screen/batch`) echo it in `meta.requestId` too.
 - **Two pagination shapes.** `POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }` with no `totalPages`, and `page` disappears once you paginate by `cursor` (or the legacy `searchAfter`). `POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }` where `total` and `totalPages` are estimates that only become exact on the last page.
 - **`caseNumber` on `POST /search/cases` does filter results now,** to a single value only: send one string, or a one element array (a second array element is rejected with 400, never silently dropped). It is echoed back in `meta.filters`.
 - **`sortBy` on `POST /search/cases`** accepts `relevance`, `recent` or `oldest`, all real sort orders; `date` is still accepted too, as a deprecated alias applied as `recent` (the response's `meta` notes the substitution).
@@ -101,6 +107,10 @@ These come from the API's actual behaviour, not from an idealised spec.
 - **Rate limit.** 10 requests per minute per API key by default (self serve tiers vary this per plan and per endpoint). 429 bodies carry `retryAfter` in seconds and `resetTime` as an ISO timestamp.
 - **`POST /party/screen` requires `purpose`.** It is the DPDP lawful basis recorded against the request, not an optional label. A match in the response is a case record bearing the screened name, not a verified identity, check `confidence` (`{ band, score, calibrated, engine }`, band one of `confirmed`/`probable`/`possible`/`unlikely`) and `evidence` (`signals` is an array of `{ name, status, weight, evidence }` objects) on each match. `data.summary.verdict` is `no_matches_found` only when `data.coverage.exhaustive` is true and nothing was withheld; sending `since` always forces `inconclusive`, and `matchCount` can read 0 while `verdict` still reads `matches_found` when `displayThreshold` hides everything found. The top level `notice` field carries the case removal policy text (there is no `coverage.note`). Costs 100 credits with matches, 20 credits with none, plus 80 credits when `adjudicate` is true AND at least one candidate was actually sent to the model (`adjudicationsRun > 0`); a 402 response carries `required`, `balance`, `shortfall`, `wallet`, `walletOwner` and either `topUpUrl` or `contactAdmin`. On the Free tier, `adjudicate: true` is a hard 403 `API_TIER_NOT_ALLOWED`, not a silent no-op.
 - **`GET /coverage` needs no key** and is cached server side for several hours, see `meta.cacheTtlSeconds`. Each row's count is `records`, not `total`; `documentBearing` and `statusOnly` are optional and omitted by default at every level (a publish flag, off by default).
+- **`POST /party/screen/batch` screens 1 to 25 names in one call,** not available on the Free tier. Each item is independently priced and can independently fail: `data.results[i]` is either `{ ok: true, screen: <same shape as POST /party/screen's data> }` or `{ ok: false, error: { code, message } }`, so check `ok` per item rather than treating the whole call as one pass/fail. `adjudicate` is not supported at the batch level (only `false`/omitted); use `POST /party/screen` directly for adjudication.
+- **`GET /usage`, `GET /me` and `GET /audit` are unmetered account introspection calls.** `GET /usage` reports tier, wallet balance, the full per tier limits object and per endpoint call volume for the current Asia/Kolkata month. `GET /me` returns your own userId/organizationId, useful before calling `GET /audit` with `userId` or `organizationId` (you may only read your own data, or your organization's as an org admin).
+- **`GET /reference/courts` and `GET /reference/case-types` need no key.** They serve the exact same taxonomy the `court` and `caseType` filters on the search and screen endpoints accept, cached for 1 hour server side (`ETag`/`Cache-Control`).
+- **`Idempotency-Key`** on the five job/charge-triggering POST endpoints (`POST /party/screen`, `POST /party/screen/batch`, `POST /cases/{id}/analyze`, `POST /cases/{id}/analyze-consolidated`, `POST /request-timeline`) makes a retried call with the same key and body a no-op replay (`Idempotency-Replayed: true`, no new charge) instead of running the job or charging twice; the same key with a different body is a 409 `IDEMPOTENCY_KEY_REUSED`. See the Idempotency-Key section above.
 
 ## Official SDKs
 
