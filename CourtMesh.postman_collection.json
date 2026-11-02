@@ -2,9 +2,10 @@
   "info": {
     "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
     "name": "CourtMesh API: Indian Court Cases",
-    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Every request for these five endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. The monitoring POST requests (create watchlist, add cases, create webhook, rotate secret, send test event, retry delivery) accept it too. Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "courtmesh"
+    "_exporter_id": "courtmesh",
+    "version": "0.5.0"
   },
   "auth": {
     "type": "bearer",
@@ -26,7 +27,7 @@
           "// The collection previously shipped with zero test scripts; this restores",
           "// a baseline automated check without hand-authoring per-endpoint assertions.",
           "pm.test(\"status code is a documented HTTP status\", function () {",
-          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 401, 402, 403, 404, 408, 409, 413, 429, 500, 502, 503]);",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204, 400, 401, 402, 403, 404, 408, 409, 413, 429, 500, 502, 503]);",
           "});",
           "",
           "pm.test(\"X-Request-Id response header is present\", function () {",
@@ -75,6 +76,36 @@
       "value": "",
       "type": "string",
       "description": "A user id for GET /audit's userId query param. Call GET /me first to get your own id."
+    },
+    {
+      "key": "cnr",
+      "value": "DLHC010084212021",
+      "type": "string",
+      "description": "A CNR, for example DLHC010084212021. Any common spelling is accepted."
+    },
+    {
+      "key": "watchlistId",
+      "value": "",
+      "type": "string",
+      "description": "A watchlist id (wl_...) returned by Create a watchlist."
+    },
+    {
+      "key": "webhookId",
+      "value": "",
+      "type": "string",
+      "description": "A webhook id (wh_...) returned by Create a webhook."
+    },
+    {
+      "key": "deliveryId",
+      "value": "",
+      "type": "string",
+      "description": "A delivery id (whd_...) from List webhook deliveries."
+    },
+    {
+      "key": "changesCursor",
+      "value": "",
+      "type": "string",
+      "description": "The pagination.nextCursor from the previous List changes call."
     }
   ],
   "item": [
@@ -535,6 +566,2279 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"code\": \"SEMANTIC_NOT_ALLOWED\",\n  \"message\": \"Semantic search is not available on this tier. Upgrade for AI powered semantic search.\",\n  \"tier\": \"free\",\n  \"upgradeUrl\": \"https://research.courtmesh.ai/api/settings/api-keys#credits\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CNR Lookup",
+      "description": "Find a case from its CNR.",
+      "item": [
+        {
+          "name": "Look up a case by CNR",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cases/by-cnr/{{cnr}}?fetch=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cases",
+                "by-cnr",
+                "{{cnr}}"
+              ],
+              "query": [
+                {
+                  "key": "fetch",
+                  "value": "false",
+                  "description": "Set to true to start a live court fetch when the CNR is not in the corpus."
+                }
+              ]
+            },
+            "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+          },
+          "response": [
+            {
+              "name": "200 Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/by-cnr/{{cnr}}?fetch=false",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "by-cnr",
+                    "{{cnr}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "fetch",
+                      "value": "false",
+                      "description": "Set to true to start a live court fetch when the CNR is not in the corpus."
+                    }
+                  ]
+                },
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"cnr\": \"DLHC010084212021\",\n    \"status\": \"found\",\n    \"case\": {\n      \"id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"caseNumber\": \"CS(COMM)/123/2021\",\n      \"title\": \"Alpha Finance Ltd vs Beta Traders\",\n      \"court\": \"Delhi High Court\",\n      \"caseType\": \"CS(COMM)\",\n      \"caseStatus\": \"Pending\",\n      \"caseStage\": \"Arguments\",\n      \"nextHearingDate\": \"2026-12-04\",\n      \"lastListedOn\": \"2026-11-10\",\n      \"orderCount\": 14,\n      \"hasDocuments\": true,\n      \"documentCount\": 14,\n      \"hasAnalysis\": false\n    },\n    \"requestId\": null\n  },\n  \"meta\": {\n    \"responseTime\": \"41ms\"\n  }\n}"
+            },
+            {
+              "name": "202 Live fetch running",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/by-cnr/{{cnr}}?fetch=false",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "by-cnr",
+                    "{{cnr}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "fetch",
+                      "value": "false",
+                      "description": "Set to true to start a live court fetch when the CNR is not in the corpus."
+                    }
+                  ]
+                },
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"cnr\": \"DLHC010084212021\",\n    \"status\": \"pending\",\n    \"case\": null,\n    \"requestId\": \"6710d3a74f50b1c2d3e4f506\"\n  }\n}"
+            },
+            {
+              "name": "404 Not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/by-cnr/{{cnr}}?fetch=false",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "by-cnr",
+                    "{{cnr}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "fetch",
+                      "value": "false",
+                      "description": "Set to true to start a live court fetch when the CNR is not in the corpus."
+                    }
+                  ]
+                },
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"No case found for this CNR\",\n  \"code\": \"CASE_NOT_FOUND\"\n}"
+            },
+            {
+              "name": "400 Invalid CNR",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cases/by-cnr/{{cnr}}?fetch=false",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cases",
+                    "by-cnr",
+                    "{{cnr}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "fetch",
+                      "value": "false",
+                      "description": "Set to true to start a live court fetch when the CNR is not in the corpus."
+                    }
+                  ]
+                },
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"CNR is not valid. Expected 16 characters, for example DLHC010084212021.\",\n  \"code\": \"INVALID_CNR\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search cases by CNR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/search/cases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "cases"
+              ]
+            },
+            "description": "`POST /search/cases` also accepts an optional `cnr` field. When present it is normalised and matched exactly (no fuzzy text match), and `query` becomes optional. Normal search pricing applies.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cnr\": \"DLHC010084212021\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Exact CNR match",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/search/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "cases"
+                  ]
+                },
+                "description": "`POST /search/cases` also accepts an optional `cnr` field. When present it is normalised and matched exactly (no fuzzy text match), and `query` becomes optional. Normal search pricing applies.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnr\": \"DLHC010084212021\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"caseNumber\": \"CS(COMM)/123/2021\",\n      \"title\": \"Alpha Finance Ltd vs Beta Traders\",\n      \"court\": \"Delhi High Court\"\n    }\n  ],\n  \"meta\": {\n    \"query\": \"\",\n    \"filters\": {\n      \"cnr\": \"DLHC010084212021\"\n    },\n    \"responseTime\": \"38ms\"\n  },\n  \"pagination\": {\n    \"total\": 1,\n    \"hasMore\": false,\n    \"page\": 1,\n    \"limit\": 20,\n    \"nextCursor\": null\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Monitoring",
+      "description": "Watch CNRs and be told when something changes. Create a watchlist, read the change feed with `GET /changes`, and optionally receive the same events as signed webhooks. Watchlist and webhook management, the daily check of every watched CNR, and webhook delivery are free; only reading the change feed costs credits (1 per non-empty page of up to 100 events). New error codes: `INVALID_CNR`, `WATCHLIST_NOT_FOUND`, `WEBHOOK_NOT_FOUND`, `DELIVERY_NOT_FOUND`, `WATCH_CAP_EXCEEDED`, `WATCHLIST_LIMIT_REACHED`, `WEBHOOK_LIMIT_REACHED`, `INVALID_WEBHOOK_URL`. API keys with explicit scopes need `monitoring:read` and `monitoring:write`.",
+      "item": [
+        {
+          "name": "Create a watchlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists"
+              ]
+            },
+            "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Created, mixed item results",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists"
+                  ]
+                },
+                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wl_6710c9a71f3b\",\n    \"name\": \"Loan book\",\n    \"itemCount\": 2,\n    \"createdAt\": \"2026-11-02T09:00:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:00:00.000Z\",\n    \"metadata\": {\n      \"team\": \"collections\"\n    },\n    \"results\": [\n      {\n        \"cnr\": \"DLHC010084212021\",\n        \"result\": \"watching\"\n      },\n      {\n        \"cnr\": \"DLHC010099992022\",\n        \"result\": \"pending\",\n        \"message\": \"Not in our records yet, fetching from the court.\"\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "403 Watchlist limit reached",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists"
+                  ]
+                },
+                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"This account has reached its watchlist limit.\",\n  \"code\": \"WATCHLIST_LIMIT_REACHED\"\n}"
+            },
+            {
+              "name": "400 Validation error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists"
+                  ]
+                },
+                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Validation failed\",\n  \"details\": [\n    \"name: String must contain at least 1 character(s)\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "List watchlists",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists?limit=20&cursor=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "1 to 100."
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "Pass the previous pagination.nextCursor to get the next page."
+                }
+              ]
+            },
+            "description": "Cursor paginated list of your watchlists. Free."
+          },
+          "response": [
+            {
+              "name": "200 Watchlists",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists?limit=20&cursor=",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Pass the previous pagination.nextCursor to get the next page."
+                    }
+                  ]
+                },
+                "description": "Cursor paginated list of your watchlists. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"wl_6710c9a71f3b\",\n      \"name\": \"Loan book\",\n      \"itemCount\": 1,\n      \"createdAt\": \"2026-11-02T09:00:00.000Z\",\n      \"updatedAt\": \"2026-11-02T09:00:00.000Z\",\n      \"metadata\": {\n        \"team\": \"collections\"\n      }\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get a watchlist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists/{{watchlistId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists",
+                "{{watchlistId}}"
+              ]
+            },
+            "description": "Fetch one watchlist by id (starts with `wl_`). Free."
+          },
+          "response": [
+            {
+              "name": "200 Watchlist",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}"
+                  ]
+                },
+                "description": "Fetch one watchlist by id (starts with `wl_`). Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wl_6710c9a71f3b\",\n    \"name\": \"Loan book\",\n    \"itemCount\": 1,\n    \"createdAt\": \"2026-11-02T09:00:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:00:00.000Z\",\n    \"metadata\": {\n      \"team\": \"collections\"\n    }\n  }\n}"
+            },
+            {
+              "name": "404 Not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}"
+                  ]
+                },
+                "description": "Fetch one watchlist by id (starts with `wl_`). Free."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Watchlist not found\",\n  \"code\": \"WATCHLIST_NOT_FOUND\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update a watchlist",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists/{{watchlistId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists",
+                "{{watchlistId}}"
+              ]
+            },
+            "description": "Rename a watchlist and/or replace its metadata. Body: `{ name?, metadata? }`. Free.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loan book (retail)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Updated",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}"
+                  ]
+                },
+                "description": "Rename a watchlist and/or replace its metadata. Body: `{ name?, metadata? }`. Free.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Loan book (retail)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wl_6710c9a71f3b\",\n    \"name\": \"Loan book (retail)\",\n    \"itemCount\": 1,\n    \"createdAt\": \"2026-11-02T09:00:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:00:00.000Z\",\n    \"metadata\": {\n      \"team\": \"collections\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete a watchlist",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists/{{watchlistId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists",
+                "{{watchlistId}}"
+              ]
+            },
+            "description": "Deletes the watchlist and its items. Events already emitted remain readable in `GET /changes`. Free."
+          },
+          "response": [
+            {
+              "name": "200 Deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}"
+                  ]
+                },
+                "description": "Deletes the watchlist and its items. Events already emitted remain readable in `GET /changes`. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"deleted\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Add cases to a watchlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists",
+                "{{watchlistId}}",
+                "items"
+              ]
+            },
+            "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded`. Caps are counted after removing duplicates. A partial success is still HTTP 200. If the whole add would exceed the cap, the call is refused with 403 `WATCH_CAP_EXCEEDED`. Free.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Per item results",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items"
+                  ]
+                },
+                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded`. Caps are counted after removing duplicates. A partial success is still HTTP 200. If the whole add would exceed the cap, the call is refused with 403 `WATCH_CAP_EXCEEDED`. Free.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"cnr\": \"DLHC010084212021\",\n        \"result\": \"watching\"\n      },\n      {\n        \"cnr\": \"NOT-A-CNR\",\n        \"result\": \"invalid\",\n        \"message\": \"Expected 16 characters.\"\n      }\n    ],\n    \"itemCount\": 1\n  }\n}"
+            },
+            {
+              "name": "403 Cap exceeded",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items"
+                  ]
+                },
+                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded`. Caps are counted after removing duplicates. A partial success is still HTTP 200. If the whole add would exceed the cap, the call is refused with 403 `WATCH_CAP_EXCEEDED`. Free.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Adding these cases would exceed the watched case cap for this plan.\",\n  \"code\": \"WATCH_CAP_EXCEEDED\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List cases on a watchlist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items?status=watching&limit=50&cursor=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists",
+                "{{watchlistId}}",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "watching",
+                  "description": "Filter by item status."
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "1 to 100."
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "Pass the previous pagination.nextCursor to get the next page."
+                }
+              ]
+            },
+            "description": "Cursor paginated items. Each item: `cnr`, `reference`, `label`, `status` (`watching`, `pending`, `not_found`, `error`), `caseId`, `court`, `title`, `lastCheckedAt`, `lastChangedAt`, `snapshot` and `addedAt`. Free."
+          },
+          "response": [
+            {
+              "name": "200 Items",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items?status=watching&limit=50&cursor=",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "watching",
+                      "description": "Filter by item status."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "1 to 100."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Pass the previous pagination.nextCursor to get the next page."
+                    }
+                  ]
+                },
+                "description": "Cursor paginated items. Each item: `cnr`, `reference`, `label`, `status` (`watching`, `pending`, `not_found`, `error`), `caseId`, `court`, `title`, `lastCheckedAt`, `lastChangedAt`, `snapshot` and `addedAt`. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\",\n      \"status\": \"watching\",\n      \"caseId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"court\": \"Delhi High Court\",\n      \"title\": \"Alpha Finance Ltd vs Beta Traders\",\n      \"lastCheckedAt\": \"2026-11-02T04:10:00.000Z\",\n      \"lastChangedAt\": \"2026-11-02T04:10:00.000Z\",\n      \"snapshot\": {\n        \"caseStatus\": \"Pending\",\n        \"caseStage\": \"Arguments\",\n        \"nextHearingDate\": \"2026-12-04\",\n        \"lastListedOn\": \"2026-11-10\",\n        \"orderCount\": 14,\n        \"latestOrderDate\": \"2026-11-10\",\n        \"disposalNature\": null\n      },\n      \"addedAt\": \"2026-11-02T09:00:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove a case from a watchlist",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items/{{cnr}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists",
+                "{{watchlistId}}",
+                "items",
+                "{{cnr}}"
+              ]
+            },
+            "description": "Stop watching one CNR in one watchlist. The CNR is normalised like everywhere else. Free."
+          },
+          "response": [
+            {
+              "name": "200 Removed",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items/{{cnr}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items",
+                    "{{cnr}}"
+                  ]
+                },
+                "description": "Stop watching one CNR in one watchlist. The CNR is normalised like everywhere else. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"deleted\": true\n  }\n}"
+            },
+            {
+              "name": "404 Watchlist not found",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items/{{cnr}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items",
+                    "{{cnr}}"
+                  ]
+                },
+                "description": "Stop watching one CNR in one watchlist. The CNR is normalised like everywhere else. Free."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Watchlist not found\",\n  \"code\": \"WATCHLIST_NOT_FOUND\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List changes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/changes?cursor={{changesCursor}}&since=2026-11-01T00:00:00Z&types=case.order_added,case.hearing_date_changed&cnr=&limit=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "changes"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "{{changesCursor}}",
+                  "description": "Opaque cursor from the previous pagination.nextCursor. Takes priority over since."
+                },
+                {
+                  "key": "since",
+                  "value": "2026-11-01T00:00:00Z",
+                  "description": "ISO timestamp, used when there is no cursor."
+                },
+                {
+                  "key": "types",
+                  "value": "case.order_added,case.hearing_date_changed",
+                  "description": "Comma separated event types."
+                },
+                {
+                  "key": "cnr",
+                  "value": "",
+                  "description": "Only events for this CNR."
+                },
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "1 to 100, default 100."
+                }
+              ]
+            },
+            "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`."
+          },
+          "response": [
+            {
+              "name": "200 Events",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/changes?cursor={{changesCursor}}&since=2026-11-01T00:00:00Z&types=case.order_added,case.hearing_date_changed&cnr=&limit=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "changes"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "{{changesCursor}}",
+                      "description": "Opaque cursor from the previous pagination.nextCursor. Takes priority over since."
+                    },
+                    {
+                      "key": "since",
+                      "value": "2026-11-01T00:00:00Z",
+                      "description": "ISO timestamp, used when there is no cursor."
+                    },
+                    {
+                      "key": "types",
+                      "value": "case.order_added,case.hearing_date_changed",
+                      "description": "Comma separated event types."
+                    },
+                    {
+                      "key": "cnr",
+                      "value": "",
+                      "description": "Only events for this CNR."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "100",
+                      "description": "1 to 100, default 100."
+                    }
+                  ]
+                },
+                "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"evt_6710d0c41a2b\",\n      \"type\": \"case.hearing_date_changed\",\n      \"createdAt\": \"2026-11-02T09:15:00.000Z\",\n      \"cnr\": \"DLHC010084212021\",\n      \"caseId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"watchlists\": [\n        {\n          \"id\": \"wl_6710c9a71f3b\",\n          \"reference\": \"LOAN-42\"\n        }\n      ],\n      \"data\": {\n        \"previous\": \"2026-11-10\",\n        \"current\": \"2026-12-04\",\n        \"snapshot\": {\n          \"caseStatus\": \"Pending\",\n          \"caseStage\": \"Arguments\",\n          \"nextHearingDate\": \"2026-12-04\",\n          \"lastListedOn\": \"2026-11-10\",\n          \"orderCount\": 14,\n          \"latestOrderDate\": \"2026-11-10\",\n          \"disposalNature\": null\n        }\n      }\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": \"eyJ0IjoiMjAyNi0xMS0wMlQwOToxNTowMC4wMDBaIiwiaSI6ImV2dF82NzEwZDBjNDFhMmIifQ\",\n    \"hasMore\": true\n  }\n}"
+            },
+            {
+              "name": "200 Caught up (empty page, free)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/changes?cursor={{changesCursor}}&since=2026-11-01T00:00:00Z&types=case.order_added,case.hearing_date_changed&cnr=&limit=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "changes"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "{{changesCursor}}",
+                      "description": "Opaque cursor from the previous pagination.nextCursor. Takes priority over since."
+                    },
+                    {
+                      "key": "since",
+                      "value": "2026-11-01T00:00:00Z",
+                      "description": "ISO timestamp, used when there is no cursor."
+                    },
+                    {
+                      "key": "types",
+                      "value": "case.order_added,case.hearing_date_changed",
+                      "description": "Comma separated event types."
+                    },
+                    {
+                      "key": "cnr",
+                      "value": "",
+                      "description": "Only events for this CNR."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "100",
+                      "description": "1 to 100, default 100."
+                    }
+                  ]
+                },
+                "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [],\n  \"pagination\": {\n    \"nextCursor\": \"eyJ0IjoiMjAyNi0xMS0wMlQwOToxNTowMC4wMDBaIiwiaSI6ImV2dF82NzEwZDBjNDFhMmIifQ\",\n    \"hasMore\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List events for a watchlist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/events?cursor={{changesCursor}}&since=2026-11-01T00:00:00Z&types=case.order_added,case.hearing_date_changed&cnr=&limit=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlists",
+                "{{watchlistId}}",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "{{changesCursor}}",
+                  "description": "Opaque cursor from the previous pagination.nextCursor. Takes priority over since."
+                },
+                {
+                  "key": "since",
+                  "value": "2026-11-01T00:00:00Z",
+                  "description": "ISO timestamp, used when there is no cursor."
+                },
+                {
+                  "key": "types",
+                  "value": "case.order_added,case.hearing_date_changed",
+                  "description": "Comma separated event types."
+                },
+                {
+                  "key": "cnr",
+                  "value": "",
+                  "description": "Only events for this CNR."
+                },
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "1 to 100, default 100."
+                }
+              ]
+            },
+            "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist."
+          },
+          "response": [
+            {
+              "name": "200 Events",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/events?cursor={{changesCursor}}&since=2026-11-01T00:00:00Z&types=case.order_added,case.hearing_date_changed&cnr=&limit=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "{{changesCursor}}",
+                      "description": "Opaque cursor from the previous pagination.nextCursor. Takes priority over since."
+                    },
+                    {
+                      "key": "since",
+                      "value": "2026-11-01T00:00:00Z",
+                      "description": "ISO timestamp, used when there is no cursor."
+                    },
+                    {
+                      "key": "types",
+                      "value": "case.order_added,case.hearing_date_changed",
+                      "description": "Comma separated event types."
+                    },
+                    {
+                      "key": "cnr",
+                      "value": "",
+                      "description": "Only events for this CNR."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "100",
+                      "description": "1 to 100, default 100."
+                    }
+                  ]
+                },
+                "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"evt_6710d0c41a2b\",\n      \"type\": \"case.hearing_date_changed\",\n      \"createdAt\": \"2026-11-02T09:15:00.000Z\",\n      \"cnr\": \"DLHC010084212021\",\n      \"caseId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"watchlists\": [\n        {\n          \"id\": \"wl_6710c9a71f3b\",\n          \"reference\": \"LOAN-42\"\n        }\n      ],\n      \"data\": {\n        \"previous\": \"2026-11-10\",\n        \"current\": \"2026-12-04\",\n        \"snapshot\": {\n          \"caseStatus\": \"Pending\",\n          \"caseStage\": \"Arguments\",\n          \"nextHearingDate\": \"2026-12-04\",\n          \"lastListedOn\": \"2026-11-10\",\n          \"orderCount\": 14,\n          \"latestOrderDate\": \"2026-11-10\",\n          \"disposalNature\": null\n        }\n      }\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": \"eyJ0IjoiMjAyNi0xMS0wMlQwOToxNTowMC4wMDBaIiwiaSI6ImV2dF82NzEwZDBjNDFhMmIifQ\",\n    \"hasMore\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create a webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks"
+              ]
+            },
+            "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Created, secret shown once",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks"
+                  ]
+                },
+                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.hearing_date_changed\",\n      \"case.order_added\"\n    ],\n    \"watchlistIds\": [\n      \"wl_6710c9a71f3b\"\n    ],\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secret\": \"whsec_Zm9yX2RvY3NfdXNlX29ubHlfbm90X2FfcmVhbF9zZWNyZXQ\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid URL",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks"
+                  ]
+                },
+                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Webhook URL must be https and resolve to a public address.\",\n  \"code\": \"INVALID_WEBHOOK_URL\"\n}"
+            },
+            {
+              "name": "403 Webhook limit reached",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks"
+                  ]
+                },
+                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"This account has reached its webhook endpoint limit.\",\n  \"code\": \"WEBHOOK_LIMIT_REACHED\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List webhooks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks?limit=20&cursor=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "1 to 100."
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "Pass the previous pagination.nextCursor to get the next page."
+                }
+              ]
+            },
+            "description": "Cursor paginated list of webhook endpoints. Secrets are never returned. Free."
+          },
+          "response": [
+            {
+              "name": "200 Webhooks",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks?limit=20&cursor=",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Pass the previous pagination.nextCursor to get the next page."
+                    }
+                  ]
+                },
+                "description": "Cursor paginated list of webhook endpoints. Secrets are never returned. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"wh_6710d1e52c3d\",\n      \"url\": \"https://example.com/hooks/courtmesh\",\n      \"events\": [\n        \"case.tracking_started\",\n        \"case.order_added\",\n        \"case.hearing_date_changed\",\n        \"case.status_changed\",\n        \"case.stage_changed\",\n        \"case.disposed\",\n        \"case.not_found\"\n      ],\n      \"watchlistIds\": null,\n      \"description\": \"Collections system\",\n      \"enabled\": true,\n      \"disabledReason\": null,\n      \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n      \"updatedAt\": \"2026-11-02T09:05:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get a webhook",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/{{webhookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "{{webhookId}}"
+              ]
+            },
+            "description": "Fetch one endpoint (`wh_` prefix). Never returns the secret. An endpoint with 3 consecutive days of only failed deliveries is set `enabled: false` with a `disabledReason`. Free."
+          },
+          "response": [
+            {
+              "name": "200 Webhook",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}"
+                  ]
+                },
+                "description": "Fetch one endpoint (`wh_` prefix). Never returns the secret. An endpoint with 3 consecutive days of only failed deliveries is set `enabled: false` with a `disabledReason`. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": null,\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}"
+                  ]
+                },
+                "description": "Fetch one endpoint (`wh_` prefix). Never returns the secret. An endpoint with 3 consecutive days of only failed deliveries is set `enabled: false` with a `disabledReason`. Free."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Webhook not found\",\n  \"code\": \"WEBHOOK_NOT_FOUND\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update a webhook",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/{{webhookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "{{webhookId}}"
+              ]
+            },
+            "description": "Body: any of `{ url, events, watchlistIds, description, enabled }`. Set `enabled: true` to re-enable a disabled endpoint. Free.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 Updated",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}"
+                  ]
+                },
+                "description": "Body: any of `{ url, events, watchlistIds, description, enabled }`. Set `enabled: true` to re-enable a disabled endpoint. Free.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enabled\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": null,\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete a webhook",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/{{webhookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "{{webhookId}}"
+              ]
+            },
+            "description": "Delete an endpoint. Free."
+          },
+          "response": [
+            {
+              "name": "200 Deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}"
+                  ]
+                },
+                "description": "Delete an endpoint. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"deleted\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Rotate a webhook secret",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/{{webhookId}}/rotate-secret",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "{{webhookId}}",
+                "rotate-secret"
+              ]
+            },
+            "description": "Issue a new signing secret and return it once. The old secret keeps signing in parallel for 24 hours: during that window each delivery carries two `v1=` values in `CourtMesh-Signature`, so your receiver can switch without dropping events. Free."
+          },
+          "response": [
+            {
+              "name": "200 New secret",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}/rotate-secret",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}",
+                    "rotate-secret"
+                  ]
+                },
+                "description": "Issue a new signing secret and return it once. The old secret keeps signing in parallel for 24 hours: during that window each delivery carries two `v1=` values in `CourtMesh-Signature`, so your receiver can switch without dropping events. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": null,\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secret\": \"whsec_bmV3X3NlY3JldF9mb3JfZG9jc19vbmx5X25vdF9yZWFs\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Send a test event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/{{webhookId}}/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "{{webhookId}}",
+                "test"
+              ]
+            },
+            "description": "Sends a `webhook.test` event to the endpoint now and returns the delivery attempt result. Free."
+          },
+          "response": [
+            {
+              "name": "200 Delivered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}/test",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}",
+                    "test"
+                  ]
+                },
+                "description": "Sends a `webhook.test` event to the endpoint now and returns the delivery attempt result. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"whd_6710d4b85f60\",\n    \"eventId\": \"evt_test_6710d4b8\",\n    \"eventType\": \"webhook.test\",\n    \"status\": \"succeeded\",\n    \"attempts\": 1,\n    \"lastAttemptAt\": \"2026-11-02T09:15:02.000Z\",\n    \"nextAttemptAt\": null,\n    \"lastResponseStatus\": 200,\n    \"lastError\": null,\n    \"createdAt\": \"2026-11-02T09:15:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "200 Endpoint failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}/test",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}",
+                    "test"
+                  ]
+                },
+                "description": "Sends a `webhook.test` event to the endpoint now and returns the delivery attempt result. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"whd_6710d4b85f60\",\n    \"eventId\": \"evt_test_6710d4b8\",\n    \"eventType\": \"webhook.test\",\n    \"status\": \"failed\",\n    \"attempts\": 1,\n    \"lastAttemptAt\": \"2026-11-02T09:15:02.000Z\",\n    \"nextAttemptAt\": \"2026-11-02T09:21:00.000Z\",\n    \"lastResponseStatus\": 500,\n    \"lastError\": \"Endpoint returned HTTP 500\",\n    \"createdAt\": \"2026-11-02T09:15:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List webhook deliveries",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/{{webhookId}}/deliveries?limit=20&cursor=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "1 to 100."
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "Pass the previous pagination.nextCursor to get the next page."
+                }
+              ]
+            },
+            "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Free."
+          },
+          "response": [
+            {
+              "name": "200 Deliveries",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}/deliveries?limit=20&cursor=",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Pass the previous pagination.nextCursor to get the next page."
+                    }
+                  ]
+                },
+                "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"whd_6710d2f63e4f\",\n      \"eventId\": \"evt_6710d0c41a2b\",\n      \"eventType\": \"case.hearing_date_changed\",\n      \"status\": \"succeeded\",\n      \"attempts\": 1,\n      \"lastAttemptAt\": \"2026-11-02T09:15:02.000Z\",\n      \"nextAttemptAt\": null,\n      \"lastResponseStatus\": 200,\n      \"lastError\": null,\n      \"createdAt\": \"2026-11-02T09:15:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Retry a delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/{{webhookId}}/deliveries/{{deliveryId}}/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries",
+                "{{deliveryId}}",
+                "retry"
+              ]
+            },
+            "description": "Re-queues one delivery to be sent now. Free."
+          },
+          "response": [
+            {
+              "name": "200 Re-queued",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}/deliveries/{{deliveryId}}/retry",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries",
+                    "{{deliveryId}}",
+                    "retry"
+                  ]
+                },
+                "description": "Re-queues one delivery to be sent now. Free."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"whd_6710d2f63e4f\",\n    \"eventId\": \"evt_6710d0c41a2b\",\n    \"eventType\": \"case.hearing_date_changed\",\n    \"status\": \"pending\",\n    \"attempts\": 1,\n    \"lastAttemptAt\": \"2026-11-02T09:15:02.000Z\",\n    \"nextAttemptAt\": \"2026-11-02T09:16:00.000Z\",\n    \"lastResponseStatus\": 200,\n    \"lastError\": null,\n    \"createdAt\": \"2026-11-02T09:15:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Delivery not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/{{webhookId}}/deliveries/{{deliveryId}}/retry",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries",
+                    "{{deliveryId}}",
+                    "retry"
+                  ]
+                },
+                "description": "Re-queues one delivery to be sent now. Free."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Delivery not found\",\n  \"code\": \"DELIVERY_NOT_FOUND\"\n}"
             }
           ]
         }
@@ -1626,7 +3930,7 @@
                 "request-timeline"
               ]
             },
-            "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 20 credits, `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
+            "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 1 credit (it was 20 before API 1.3.0), `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"refresh\": false\n}",
@@ -1661,7 +3965,7 @@
                     "request-timeline"
                   ]
                 },
-                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 20 credits, `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
+                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 1 credit (it was 20 before API 1.3.0), `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"refresh\": false\n}",
@@ -1707,7 +4011,7 @@
                     "request-timeline"
                   ]
                 },
-                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 20 credits, `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
+                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 1 credit (it was 20 before API 1.3.0), `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"refresh\": false\n}",
@@ -1753,7 +4057,7 @@
                     "request-timeline"
                   ]
                 },
-                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 20 credits, `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
+                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 1 credit (it was 20 before API 1.3.0), `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"refresh\": false\n}",
@@ -1799,7 +4103,7 @@
                     "request-timeline"
                   ]
                 },
-                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 20 credits, `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
+                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 1 credit (it was 20 before API 1.3.0), `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"refresh\": true\n}",
@@ -1845,7 +4149,7 @@
                     "request-timeline"
                   ]
                 },
-                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 20 credits, `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
+                "description": "Read or refresh the order sheet and hearing history for a case.\n\nBody: `{ \"case_id\": \"<24 character hexadecimal case id>\", \"refresh\": false }`. `case_id` is required and must be a 24 character hexadecimal case id, a case number will not work here. `refresh` is optional and defaults to false.\n\n`refresh: false` (default) is a STORED read: 1 credit, `meta.liveFetch` is `false`, and it never contacts a court portal. `refresh: true` forces a LIVE fetch directly from the court's own systems instead: 1 credit (it was 20 before API 1.3.0), `meta.liveFetch` is `true`, available on the PAYG tier and above only (Free tier returns 403 `LIVE_FETCH_NOT_ALLOWED`), and subject to a per tier daily cap (429 `LIVE_FETCH_LIMIT_REACHED` once exhausted, with `retryAfter` telling you when it resets).\n\nThe response tells you what happened:\n- `status: \"pending\"` with a `requestId`. A background job was queued. Poll GET /get-timeline/{requestId}.\n- `status: \"completed\"` with `cached: true`, `orders` and `orderCount`. Orders were already fetched today, so you get them straight back.\n- `status: \"completed\"` with `orderCount: 0` and an explanatory `message` for Supreme Court cases, which do not have separate orders. The case document is itself the judgment.\n- `status: \"failed\"` with a `message`, for example when a District Court case has no CNR.\n\nOrder objects carry `id`, `title`, `caseNumber`, `decisionDate`, `court`, `caseType`, `disposalNature`, `judges`, `judge`, `petitioners`, `respondents`, `hasDocument` and `s3Bucket`.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"refresh\": true\n}",

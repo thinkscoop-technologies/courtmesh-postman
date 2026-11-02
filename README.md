@@ -1,6 +1,6 @@
 # CourtMesh API Postman Collection
 
-A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 20 production endpoints (plus the deep variant of `GET /health`), organised into ten folders, with request bodies, saved example responses and per request documentation.
+A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 40 production endpoints (plus the deep variant of `GET /health`), organised into twelve folders, with request bodies, saved example responses and per request documentation.
 
 Base URL: `https://research.courtmesh.ai/api/v1/prod`
 
@@ -14,6 +14,8 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | Cases | `GET /cases/{id}`, `GET /cases/{id}/related`, `GET /cases/{id}/pdf` |
 | Analysis | `GET /cases/{id}/analysis`, `POST /cases/{id}/analyze`, `POST /cases/{id}/analyze-consolidated` |
 | Judges | `GET /judges/search` |
+| CNR Lookup | `GET /cases/by-cnr/{cnr}`, `POST /search/cases` with `cnr` |
+| Monitoring | watchlists (`/watchlists`, `/watchlists/{id}`, `/watchlists/{id}/items`, `/watchlists/{id}/items/{cnr}`), the change feed (`GET /changes`, `GET /watchlists/{id}/events`), webhooks (`/webhooks`, `/webhooks/{id}`, `rotate-secret`, `test`, `deliveries`, delivery `retry`) |
 | Timeline | `POST /request-timeline`, `GET /get-timeline/{requestId}` |
 | Litigation Check | `POST /party/screen`, `POST /party/screen/batch` |
 | Account | `GET /usage`, `GET /me`, `GET /audit` |
@@ -21,7 +23,7 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | Coverage | `GET /coverage` |
 | System | `GET /health`, `GET /health?deep=1` |
 
-58 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`), an unavailable entitlement lookup (503), and a batch party screen mixing successful and failed items.
+93 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`), an unavailable entitlement lookup (503), and a batch party screen mixing successful and failed items.
 
 ## Import and run it locally
 
@@ -102,7 +104,8 @@ These come from the API's actual behaviour, not from an idealised spec.
 - **The semantic endpoint's top level filters are real.** `court`, `year`, `caseType`, `caseNumber`, `judgeName` (and aliases `judges`/`judge`), `fromDate` and `toDate` are all mapped onto the vector store's filter keys and echoed back in `meta.appliedFilters`. The nested `filters` object addresses the vector store's own keys directly and takes precedence when the same key is set in both places. Not available on the Free tier at all (403 `SEMANTIC_NOT_ALLOWED`).
 - **`GET /cases/{id}/pdf` returns ciphertext.** `data.pdfUrl` is an encrypted, time limited link that expires in one hour, not a URL you can fetch directly. Its two distinct 404s are `CASE_NOT_FOUND` (no such case) and `PDF_NOT_STORED` (case exists, no stored document, with a `hint` pointing at `POST /request-timeline` with `refresh: true`).
 - **`POST /cases/{id}/analyze` needs `allowRemoteFetch: true`** before it will fetch a case's source document from a remote court host that is not already stored; without it, that case returns 403 `REMOTE_FETCH_NOT_ALLOWED`. A remote fetch adds a 20 credit surcharge on top of the base 100.
-- **`POST /request-timeline` defaults to a stored read** (1 credit, `meta.liveFetch: false`). Send `refresh: true` for a live court fetch instead (20 credits, `meta.liveFetch: true`, PAYG tier or above only, 403 `LIVE_FETCH_NOT_ALLOWED` on Free, 429 `LIVE_FETCH_LIMIT_REACHED` once the tier's daily cap is exhausted).
+- **`POST /request-timeline` defaults to a stored read** (1 credit, `meta.liveFetch: false`). Send `refresh: true` for a live court fetch instead (also 1 credit, `meta.liveFetch: true`, PAYG tier or above only, 403 `LIVE_FETCH_NOT_ALLOWED` on Free, 429 `LIVE_FETCH_LIMIT_REACHED` once the tier's daily cap is exhausted).
+- **Monitoring is free to set up and run.** Watchlist and webhook management, the daily check of every watched CNR and webhook delivery cost 0 credits; reading `GET /changes` or `GET /watchlists/{id}/events` costs 1 credit per non-empty page of up to 100 events (an empty page is free). `GET /cases/by-cnr/{cnr}` costs 1 credit when a record is returned. Webhook deliveries are signed: verify `CourtMesh-Signature` with the Node or Python SDK helper.
 - **Path ids are flexible.** Every `{id}` accepts a 24 character hexadecimal case id or a case number. `POST /request-timeline` is the exception: its `case_id` must be a 24 character hexadecimal case id.
 - **Rate limit.** 10 requests per minute per API key by default (self serve tiers vary this per plan and per endpoint). 429 bodies carry `retryAfter` in seconds and `resetTime` as an ISO timestamp.
 - **`POST /party/screen` requires `purpose`.** It is the DPDP lawful basis recorded against the request, not an optional label. A match in the response is a case record bearing the screened name, not a verified identity, check `confidence` (`{ band, score, calibrated, engine }`, band one of `confirmed`/`probable`/`possible`/`unlikely`) and `evidence` (`signals` is an array of `{ name, status, weight, evidence }` objects) on each match. `data.summary.verdict` is `no_matches_found` only when `data.coverage.exhaustive` is true and nothing was withheld; sending `since` always forces `inconclusive`, and `matchCount` can read 0 while `verdict` still reads `matches_found` when `displayThreshold` hides everything found. The top level `notice` field carries the case removal policy text (there is no `coverage.note`). Costs 100 credits with matches, 20 credits with none, plus 80 credits when `adjudicate` is true AND at least one candidate was actually sent to the model (`adjudicationsRun > 0`); a 402 response carries `required`, `balance`, `shortfall`, `wallet`, `walletOwner` and either `topUpUrl` or `contactAdmin`. On the Free tier, `adjudicate: true` is a hard 403 `API_TIER_NOT_ALLOWED`, not a silent no-op.
