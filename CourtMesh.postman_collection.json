@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
     "name": "CourtMesh API: Indian Court Cases",
-    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. The monitoring POST requests (create watchlist, add cases, create webhook, rotate secret, send test event, retry delivery) accept it too. Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "courtmesh",
     "version": "0.5.0"
@@ -603,7 +603,7 @@
                 }
               ]
             },
-            "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+            "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL; `requestId` is opaque and is not accepted by `GET /get-timeline`), or `not_found` (404 with code `CASE_NOT_FOUND`; the error body also carries `cnr` and `status`). A Supreme Court CNR that is not in the corpus cannot be fetched live and is `404` at once.\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: the call that starts the fetch returns `202 pending` and is free; the poll that returns the record is the one 1 credit charge, and a fetch the court portal cannot satisfy is free. Fetches share the daily live fetch cap with `POST /request-timeline` `refresh: true`."
           },
           "response": [
             {
@@ -730,7 +730,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"No case found for this CNR\",\n  \"code\": \"CASE_NOT_FOUND\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"CASE_NOT_FOUND\",\n  \"message\": \"No case with this CNR was found.\",\n  \"error\": \"No case with this CNR was found.\",\n  \"cnr\": \"DLHC010084212021\",\n  \"status\": \"not_found\"\n}"
             },
             {
               "name": "400 Invalid CNR",
@@ -772,7 +772,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"CNR is not valid. Expected 16 characters, for example DLHC010084212021.\",\n  \"code\": \"INVALID_CNR\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"INVALID_CNR\",\n  \"message\": \"That is not a valid CNR. A CNR has 16 characters, for example DLHC010084212021.\",\n  \"error\": \"That is not a valid CNR. A CNR has 16 characters, for example DLHC010084212021.\"\n}"
             }
           ]
         },
@@ -895,7 +895,7 @@
                 "watchlists"
               ]
             },
-            "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+            "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists. Adding CNRs that are not in the corpus yet starts a live fetch, so there is also a daily limit on those: Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited; items over it come back `cap_exceeded`. `not_found` and `error` items still count toward the cap until removed.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A Supreme Court CNR that is not in the corpus is `not_found` at once. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
@@ -997,7 +997,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"This account has reached its watchlist limit.\",\n  \"code\": \"WATCHLIST_LIMIT_REACHED\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"WATCHLIST_LIMIT_REACHED\",\n  \"message\": \"An account can have up to 50 watchlists.\",\n  \"error\": \"An account can have up to 50 watchlists.\"\n}"
             },
             {
               "name": "400 Validation error",
@@ -1043,7 +1043,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Validation failed\",\n  \"details\": [\n    \"name: String must contain at least 1 character(s)\"\n  ]\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"details\": [\n    \"name: name is required.\"\n  ]\n}"
             }
           ]
         },
@@ -1217,7 +1217,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Watchlist not found\",\n  \"code\": \"WATCHLIST_NOT_FOUND\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"WATCHLIST_NOT_FOUND\",\n  \"message\": \"Watchlist not found.\",\n  \"error\": \"Watchlist not found.\"\n}"
             }
           ]
         },
@@ -1395,7 +1395,7 @@
                 "items"
               ]
             },
-            "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded`. Caps are counted after removing duplicates. A partial success is still HTTP 200. If the whole add would exceed the cap, the call is refused with 403 `WATCH_CAP_EXCEEDED`. Free.",
+            "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded` (over the watched CNR cap, or over the daily limit on adding CNRs that are not yet in the corpus: Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). A Supreme Court CNR that is not in the corpus is `not_found` at once. `not_found` and `error` items still count toward the cap until removed. Caps are counted after removing duplicates. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request. Free.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
@@ -1453,7 +1453,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"cnr\": \"DLHC010084212021\",\n        \"result\": \"watching\"\n      },\n      {\n        \"cnr\": \"NOT-A-CNR\",\n        \"result\": \"invalid\",\n        \"message\": \"Expected 16 characters.\"\n      }\n    ],\n    \"itemCount\": 1\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"cnr\": \"DLHC010084212021\",\n        \"result\": \"watching\"\n      },\n      {\n        \"cnr\": \"NOT-A-CNR\",\n        \"result\": \"invalid\",\n        \"message\": \"This is not a valid CNR.\"\n      }\n    ],\n    \"itemCount\": 1\n  }\n}"
             },
             {
               "name": "403 Cap exceeded",
@@ -1501,7 +1501,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Adding these cases would exceed the watched case cap for this plan.\",\n  \"code\": \"WATCH_CAP_EXCEEDED\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"WATCH_CAP_EXCEEDED\",\n  \"message\": \"Your plan watches up to 10 CNRs and the limit is reached.\",\n  \"error\": \"Your plan watches up to 10 CNRs and the limit is reached.\"\n}"
             }
           ]
         },
@@ -1622,7 +1622,7 @@
                 "{{cnr}}"
               ]
             },
-            "description": "Stop watching one CNR in one watchlist. The CNR is normalised like everywhere else. Free."
+            "description": "Stop watching one CNR in one watchlist. The CNR is normalised like everywhere else. Returns `404 ITEM_NOT_FOUND` when the CNR is not in the list and `404 WATCHLIST_NOT_FOUND` when the watchlist does not exist. Free."
           },
           "response": [
             {
@@ -1695,7 +1695,43 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Watchlist not found\",\n  \"code\": \"WATCHLIST_NOT_FOUND\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"WATCHLIST_NOT_FOUND\",\n  \"message\": \"Watchlist not found.\",\n  \"error\": \"Watchlist not found.\"\n}"
+            },
+            {
+              "name": "404 CNR not in the watchlist",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items/{{cnr}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items",
+                    "{{cnr}}"
+                  ]
+                },
+                "description": "Stop watching one CNR in one watchlist. The CNR is normalised like everywhere else. Free."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"ITEM_NOT_FOUND\",\n  \"message\": \"That CNR is not in this watchlist.\",\n  \"error\": \"That CNR is not in this watchlist.\"\n}"
             }
           ]
         },
@@ -1745,7 +1781,7 @@
                 }
               ]
             },
-            "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`."
+            "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing."
           },
           "response": [
             {
@@ -1918,7 +1954,7 @@
                 }
               ]
             },
-            "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist."
+            "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing."
           },
           "response": [
             {
@@ -1997,11 +2033,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}",
-                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -2013,7 +2044,7 @@
                 "webhooks"
               ]
             },
-            "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+            "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Returns HTTP 201. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
@@ -2026,7 +2057,7 @@
           },
           "response": [
             {
-              "name": "200 Created, secret shown once",
+              "name": "201 Created, secret shown once",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -2059,8 +2090,8 @@
                   }
                 }
               },
-              "status": "OK",
-              "code": 200,
+              "status": "Created",
+              "code": 201,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -2069,7 +2100,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.hearing_date_changed\",\n      \"case.order_added\"\n    ],\n    \"watchlistIds\": [\n      \"wl_6710c9a71f3b\"\n    ],\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secret\": \"whsec_Zm9yX2RvY3NfdXNlX29ubHlfbm90X2FfcmVhbF9zZWNyZXQ\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.hearing_date_changed\",\n      \"case.order_added\"\n    ],\n    \"watchlistIds\": [\n      \"wl_6710c9a71f3b\"\n    ],\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secret\": \"whsec_Zm9yX2RvY3NfdXNlX29ubHlfbm90X2FfcmVhbF9zZWNyZXQ\",\n    \"secretRotating\": false\n  }\n}"
             },
             {
               "name": "400 Invalid URL",
@@ -2115,7 +2146,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Webhook URL must be https and resolve to a public address.\",\n  \"code\": \"INVALID_WEBHOOK_URL\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"INVALID_WEBHOOK_URL\",\n  \"message\": \"The webhook URL is not allowed.\",\n  \"error\": \"The webhook URL is not allowed.\"\n}"
             },
             {
               "name": "403 Webhook limit reached",
@@ -2161,7 +2192,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"This account has reached its webhook endpoint limit.\",\n  \"code\": \"WEBHOOK_LIMIT_REACHED\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"WEBHOOK_LIMIT_REACHED\",\n  \"message\": \"An account can have up to 10 webhook endpoints.\",\n  \"error\": \"An account can have up to 10 webhook endpoints.\"\n}"
             }
           ]
         },
@@ -2242,7 +2273,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"wh_6710d1e52c3d\",\n      \"url\": \"https://example.com/hooks/courtmesh\",\n      \"events\": [\n        \"case.tracking_started\",\n        \"case.order_added\",\n        \"case.hearing_date_changed\",\n        \"case.status_changed\",\n        \"case.stage_changed\",\n        \"case.disposed\",\n        \"case.not_found\"\n      ],\n      \"watchlistIds\": null,\n      \"description\": \"Collections system\",\n      \"enabled\": true,\n      \"disabledReason\": null,\n      \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n      \"updatedAt\": \"2026-11-02T09:05:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"wh_6710d1e52c3d\",\n      \"url\": \"https://example.com/hooks/courtmesh\",\n      \"events\": [\n        \"case.tracking_started\",\n        \"case.order_added\",\n        \"case.hearing_date_changed\",\n        \"case.status_changed\",\n        \"case.stage_changed\",\n        \"case.disposed\",\n        \"case.not_found\"\n      ],\n      \"watchlistIds\": [],\n      \"description\": \"Collections system\",\n      \"enabled\": true,\n      \"disabledReason\": null,\n      \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n      \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n      \"secretRotating\": false\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
             }
           ]
         },
@@ -2301,7 +2332,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": null,\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": [],\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secretRotating\": false\n  }\n}"
             },
             {
               "name": "404 Not found",
@@ -2335,7 +2366,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Webhook not found\",\n  \"code\": \"WEBHOOK_NOT_FOUND\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"WEBHOOK_NOT_FOUND\",\n  \"message\": \"Webhook not found.\",\n  \"error\": \"Webhook not found.\"\n}"
             }
           ]
         },
@@ -2420,7 +2451,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": null,\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": [],\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secretRotating\": false\n  }\n}"
             }
           ]
         },
@@ -2491,11 +2522,6 @@
               {
                 "key": "Accept",
                 "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}",
-                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -2545,7 +2571,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": null,\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secret\": \"whsec_bmV3X3NlY3JldF9mb3JfZG9jc19vbmx5X25vdF9yZWFs\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3d\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": [],\n    \"description\": \"Collections system\",\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secret\": \"whsec_bmV3X3NlY3JldF9mb3JfZG9jc19vbmx5X25vdF9yZWFs\",\n    \"secretRotating\": true\n  }\n}"
             }
           ]
         },
@@ -2557,11 +2583,6 @@
               {
                 "key": "Accept",
                 "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}",
-                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -2575,7 +2596,7 @@
                 "test"
               ]
             },
-            "description": "Sends a `webhook.test` event to the endpoint now and returns the delivery attempt result. Free."
+            "description": "Sends a `webhook.test` event to the endpoint now, as a single attempt that is never retried, and returns the delivery object (`status` is `succeeded` or `failed`). Free."
           },
           "response": [
             {
@@ -2646,7 +2667,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"whd_6710d4b85f60\",\n    \"eventId\": \"evt_test_6710d4b8\",\n    \"eventType\": \"webhook.test\",\n    \"status\": \"failed\",\n    \"attempts\": 1,\n    \"lastAttemptAt\": \"2026-11-02T09:15:02.000Z\",\n    \"nextAttemptAt\": \"2026-11-02T09:21:00.000Z\",\n    \"lastResponseStatus\": 500,\n    \"lastError\": \"Endpoint returned HTTP 500\",\n    \"createdAt\": \"2026-11-02T09:15:00.000Z\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"whd_6710d4b85f60\",\n    \"eventId\": \"evt_test_6710d4b8\",\n    \"eventType\": \"webhook.test\",\n    \"status\": \"failed\",\n    \"attempts\": 1,\n    \"lastAttemptAt\": \"2026-11-02T09:15:02.000Z\",\n    \"nextAttemptAt\": null,\n    \"lastResponseStatus\": 500,\n    \"lastError\": \"Endpoint returned HTTP 500\",\n    \"createdAt\": \"2026-11-02T09:15:00.000Z\"\n  }\n}"
             }
           ]
         },
@@ -2683,7 +2704,7 @@
                 }
               ]
             },
-            "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Free."
+            "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Newest first; delivery history is kept 30 days. Free."
           },
           "response": [
             {
@@ -2743,11 +2764,6 @@
               {
                 "key": "Accept",
                 "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}",
-                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
               }
             ],
             "url": {
@@ -2838,7 +2854,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Delivery not found\",\n  \"code\": \"DELIVERY_NOT_FOUND\"\n}"
+              "body": "{\n  \"success\": false,\n  \"code\": \"DELIVERY_NOT_FOUND\",\n  \"message\": \"Delivery not found.\",\n  \"error\": \"Delivery not found.\"\n}"
             }
           ]
         }
