@@ -603,7 +603,7 @@
                 }
               ]
             },
-            "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL; `requestId` is opaque and is not accepted by `GET /get-timeline`), or `not_found` (404 with code `CASE_NOT_FOUND`; the error body also carries `cnr` and `status`). A Supreme Court CNR that is not in the corpus cannot be fetched live and is `404` at once.\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: the call that starts the fetch returns `202 pending` and is free; the poll that returns the record is the one 1 credit charge, and a fetch the court portal cannot satisfy is free. Fetches share the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+            "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL; `requestId` is opaque and is not accepted by `GET /get-timeline`), or `not_found` (404 with code `CASE_NOT_FOUND`; the error body also carries `cnr` and `status`). A Supreme Court CNR that is not in the corpus cannot be fetched live and is `404` at once.\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: the call that starts the fetch returns `202 pending` and is free; the poll that returns the record is the one 1 credit charge, and a fetch the court portal cannot satisfy is free. Fetches share the daily live fetch cap with `POST /request-timeline` `refresh: true`.\n\nIf the court portal had nothing for the CNR in the last 24 hours, `fetch=true` does not ask it again: the call answers `404 CASE_NOT_FOUND` straight away. A case taken down at a party's request is reported as not found."
           },
           "response": [
             {
@@ -634,7 +634,7 @@
                     }
                   ]
                 },
-                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL; `requestId` is opaque and is not accepted by `GET /get-timeline`), or `not_found` (404 with code `CASE_NOT_FOUND`; the error body also carries `cnr` and `status`). A Supreme Court CNR that is not in the corpus cannot be fetched live and is `404` at once.\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: the call that starts the fetch returns `202 pending` and is free; the poll that returns the record is the one 1 credit charge, and a fetch the court portal cannot satisfy is free. Fetches share the daily live fetch cap with `POST /request-timeline` `refresh: true`.\n\nIf the court portal had nothing for the CNR in the last 24 hours, `fetch=true` does not ask it again: the call answers `404 CASE_NOT_FOUND` straight away. A case taken down at a party's request is reported as not found."
               },
               "status": "OK",
               "code": 200,
@@ -676,7 +676,7 @@
                     }
                   ]
                 },
-                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL; `requestId` is opaque and is not accepted by `GET /get-timeline`), or `not_found` (404 with code `CASE_NOT_FOUND`; the error body also carries `cnr` and `status`). A Supreme Court CNR that is not in the corpus cannot be fetched live and is `404` at once.\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: the call that starts the fetch returns `202 pending` and is free; the poll that returns the record is the one 1 credit charge, and a fetch the court portal cannot satisfy is free. Fetches share the daily live fetch cap with `POST /request-timeline` `refresh: true`.\n\nIf the court portal had nothing for the CNR in the last 24 hours, `fetch=true` does not ask it again: the call answers `404 CASE_NOT_FOUND` straight away. A case taken down at a party's request is reported as not found."
               },
               "status": "Accepted",
               "code": 202,
@@ -718,7 +718,7 @@
                     }
                   ]
                 },
-                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL; `requestId` is opaque and is not accepted by `GET /get-timeline`), or `not_found` (404 with code `CASE_NOT_FOUND`; the error body also carries `cnr` and `status`). A Supreme Court CNR that is not in the corpus cannot be fetched live and is `404` at once.\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: the call that starts the fetch returns `202 pending` and is free; the poll that returns the record is the one 1 credit charge, and a fetch the court portal cannot satisfy is free. Fetches share the daily live fetch cap with `POST /request-timeline` `refresh: true`.\n\nIf the court portal had nothing for the CNR in the last 24 hours, `fetch=true` does not ask it again: the call answers `404 CASE_NOT_FOUND` straight away. A case taken down at a party's request is reported as not found."
               },
               "status": "Not Found",
               "code": 404,
@@ -760,7 +760,7 @@
                     }
                   ]
                 },
-                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL, or `GET /get-timeline/{requestId}`), or `not_found` (404 with code `CASE_NOT_FOUND`).\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: 1 credit, charged once when the fetch is accepted, sharing the daily live fetch cap with `POST /request-timeline` `refresh: true`."
+                "description": "Look a case up by its CNR (Case Number Record). Any common spelling is accepted and normalised: the path value is trimmed, uppercased, and spaces, hyphens, slashes, dots and a leading `CNR`, `CNR:` or `CNR NO` are removed. A valid CNR is 16 characters, for example `DLHC010084212021`; anything else is 400 `INVALID_CNR`.\n\nCosts 1 credit, charged only when a record is returned (`not_found` and `pending` cost 0).\n\n`data.status` is `found` (200, `data.case` is the same record `GET /cases/{id}` returns, including `caseStatus`, `caseStage`, `nextHearingDate`, `lastListedOn` and `orderCount`), `pending` (202, a live fetch is running: poll this same URL; `requestId` is opaque and is not accepted by `GET /get-timeline`), or `not_found` (404 with code `CASE_NOT_FOUND`; the error body also carries `cnr` and `status`). A Supreme Court CNR that is not in the corpus cannot be fetched live and is `404` at once.\n\nSet `fetch=true` to start a live court fetch for a CNR that is not in the corpus: the call that starts the fetch returns `202 pending` and is free; the poll that returns the record is the one 1 credit charge, and a fetch the court portal cannot satisfy is free. Fetches share the daily live fetch cap with `POST /request-timeline` `refresh: true`.\n\nIf the court portal had nothing for the CNR in the last 24 hours, `fetch=true` does not ask it again: the call answers `404 CASE_NOT_FOUND` straight away. A case taken down at a party's request is reported as not found."
               },
               "status": "Bad Request",
               "code": 400,
@@ -800,7 +800,7 @@
                 "cases"
               ]
             },
-            "description": "`POST /search/cases` also accepts an optional `cnr` field. When present it is normalised and matched exactly (no fuzzy text match), and `query` becomes optional. Normal search pricing applies.",
+            "description": "`POST /search/cases` also accepts an optional `cnr` field. When present it is normalised and matched exactly (no fuzzy text match), and `query` becomes optional and is ignored. Normal search pricing applies (1 credit). The result is one ordinary search hit (or an empty list), not the full record: progress fields and `orderCount` are only on `GET /cases/by-cnr/{cnr}`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"cnr\": \"DLHC010084212021\"\n}",
@@ -836,7 +836,7 @@
                     "cases"
                   ]
                 },
-                "description": "`POST /search/cases` also accepts an optional `cnr` field. When present it is normalised and matched exactly (no fuzzy text match), and `query` becomes optional. Normal search pricing applies.",
+                "description": "`POST /search/cases` also accepts an optional `cnr` field. When present it is normalised and matched exactly (no fuzzy text match), and `query` becomes optional and is ignored. Normal search pricing applies (1 credit). The result is one ordinary search hit (or an empty list), not the full record: progress fields and `orderCount` are only on `GET /cases/by-cnr/{cnr}`.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"cnr\": \"DLHC010084212021\"\n}",
@@ -865,7 +865,7 @@
     },
     {
       "name": "Monitoring",
-      "description": "Watch CNRs and be told when something changes. Create a watchlist, read the change feed with `GET /changes`, and optionally receive the same events as signed webhooks. Watchlist and webhook management, the daily check of every watched CNR, and webhook delivery are free; only reading the change feed costs credits (1 per non-empty page of up to 100 events). New error codes: `INVALID_CNR`, `WATCHLIST_NOT_FOUND`, `WEBHOOK_NOT_FOUND`, `DELIVERY_NOT_FOUND`, `WATCH_CAP_EXCEEDED`, `WATCHLIST_LIMIT_REACHED`, `WEBHOOK_LIMIT_REACHED`, `INVALID_WEBHOOK_URL`. API keys with explicit scopes need `monitoring:read` and `monitoring:write`.",
+      "description": "Watch CNRs and be told when something changes. Create a watchlist, read the change feed with `GET /changes`, and optionally receive the same events as signed webhooks. Watchlist and webhook management, the daily check of every watched CNR, and webhook delivery are free; only reading the change feed costs credits (1 per non-empty page of up to 100 events). New error codes: `INVALID_CNR`, `WATCHLIST_NOT_FOUND`, `WEBHOOK_NOT_FOUND`, `DELIVERY_NOT_FOUND`, `WATCH_CAP_EXCEEDED`, `WATCHLIST_LIMIT_REACHED`, `WEBHOOK_LIMIT_REACHED`, `INVALID_WEBHOOK_URL`, `ITEM_NOT_FOUND`. Dates are `YYYY-MM-DD` on the Indian calendar; a court's year 9999 \"no date\" is returned as null. A case taken down at a party's request shows as an `unavailable` item, sends no events, and cannot be added (the add returns `not_found`). API keys with explicit scopes need `monitoring:read` and `monitoring:write`.",
       "item": [
         {
           "name": "Create a watchlist",
@@ -895,7 +895,7 @@
                 "watchlists"
               ]
             },
-            "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists. Adding CNRs that are not in the corpus yet starts a live fetch, so there is also a daily limit on those: Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited; items over it come back `cap_exceeded`. `not_found` and `error` items still count toward the cap until removed.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A Supreme Court CNR that is not in the corpus is `not_found` at once. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request.",
+            "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists. The cap counts distinct CNRs across all watchlists, so the same CNR on two lists uses one slot. Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. `not_found`, `error` and `unavailable` items still count toward the cap until removed.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A Supreme Court CNR that is not in the corpus is `not_found` at once, and so is a CNR the court portal had nothing for in the last 24 hours (no new fetch is started until that cooldown passes) or a case that was taken down. A CNR already in the corpus is `watching` at once; its `case.tracking_started` event is sent when the first fresh refresh completes, or immediately if the stored record is already current. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
@@ -930,7 +930,7 @@
                     "watchlists"
                   ]
                 },
-                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists. The cap counts distinct CNRs across all watchlists, so the same CNR on two lists uses one slot. Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. `not_found`, `error` and `unavailable` items still count toward the cap until removed.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A Supreme Court CNR that is not in the corpus is `not_found` at once, and so is a CNR the court portal had nothing for in the last 24 hours (no new fetch is started until that cooldown passes) or a case that was taken down. A CNR already in the corpus is `watching` at once; its `case.tracking_started` event is sent when the first fresh refresh completes, or immediately if the stored record is already current. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
@@ -976,7 +976,7 @@
                     "watchlists"
                   ]
                 },
-                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists. The cap counts distinct CNRs across all watchlists, so the same CNR on two lists uses one slot. Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. `not_found`, `error` and `unavailable` items still count toward the cap until removed.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A Supreme Court CNR that is not in the corpus is `not_found` at once, and so is a CNR the court portal had nothing for in the last 24 hours (no new fetch is started until that cooldown passes) or a case that was taken down. A CNR already in the corpus is `watching` at once; its `case.tracking_started` event is sent when the first fresh refresh completes, or immediately if the stored record is already current. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
@@ -1022,7 +1022,7 @@
                     "watchlists"
                   ]
                 },
-                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A partial success is still HTTP 200.",
+                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists. The cap counts distinct CNRs across all watchlists, so the same CNR on two lists uses one slot. Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. `not_found`, `error` and `unavailable` items still count toward the cap until removed.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A Supreme Court CNR that is not in the corpus is `not_found` at once, and so is a CNR the court portal had nothing for in the last 24 hours (no new fetch is started until that cooldown passes) or a case that was taken down. A CNR already in the corpus is `watching` at once; its `case.tracking_started` event is sent when the first fresh refresh completes, or immediately if the stored record is already current. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
@@ -1044,6 +1044,52 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"details\": [\n    \"name: name is required.\"\n  ]\n}"
+            },
+            {
+              "name": "200 Daily allowance reached and cooldown",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists"
+                  ]
+                },
+                "description": "Create a named set of CNRs to monitor. Body: `{ name (1..100 chars), items? (up to 100), metadata? (up to 2 KB) }`. Each item is `{ cnr, reference? (your own id, up to 200 chars, echoed on every event), label? (up to 200 chars) }`.\n\nFree: watchlist management costs 0 credits, and the daily monitoring check of every watched CNR is included. Watched CNR caps per account: Free 10, Pay As You Go 1,000, Scale 10,000, Enterprise by contract; at most 50 watchlists. The cap counts distinct CNRs across all watchlists, so the same CNR on two lists uses one slot. Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. `not_found`, `error` and `unavailable` items still count toward the cap until removed.\n\nThe response is the watchlist plus one result per item: `watching`, `pending` (not in the corpus, so a live fetch was started), `invalid`, `duplicate`, `cap_exceeded` or `not_found`. A Supreme Court CNR that is not in the corpus is `not_found` at once, and so is a CNR the court portal had nothing for in the last 24 hours (no new fetch is started until that cooldown passes) or a case that was taken down. A CNR already in the corpus is `watching` at once; its `case.tracking_started` event is sent when the first fresh refresh completes, or immediately if the stored record is already current. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Loan book\",\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\"\n    },\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\"\n    }\n  ],\n  \"metadata\": {\n    \"team\": \"collections\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wl_6710c9a71f3b\",\n    \"name\": \"Loan book\",\n    \"itemCount\": 1,\n    \"createdAt\": \"2026-11-02T09:00:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:00:00.000Z\",\n    \"metadata\": {\n      \"team\": \"collections\"\n    },\n    \"results\": [\n      {\n        \"cnr\": \"DLHC010084212021\",\n        \"result\": \"watching\"\n      },\n      {\n        \"cnr\": \"DLHC010099992022\",\n        \"result\": \"cap_exceeded\",\n        \"message\": \"The daily limit for adding case numbers has been reached. It resets at midnight IST.\"\n      },\n      {\n        \"cnr\": \"DLHC010077772020\",\n        \"result\": \"not_found\",\n        \"message\": \"eCourts had no such case when we last looked. Try again tomorrow.\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"responseTime\": \"58ms\"\n  }\n}"
             }
           ]
         },
@@ -1395,7 +1441,7 @@
                 "items"
               ]
             },
-            "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded` (over the watched CNR cap, or over the daily limit on adding CNRs that are not yet in the corpus: Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). A Supreme Court CNR that is not in the corpus is `not_found` at once. `not_found` and `error` items still count toward the cap until removed. Caps are counted after removing duplicates. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request. Free.",
+            "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded` (over the watched CNR cap, over the daily add allowance per account, or over the daily limit on adding CNRs that are not yet in the corpus; the item message says which). Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. A Supreme Court CNR that is not in the corpus is `not_found` at once. A CNR the court portal had nothing for in the last 24 hours is `not_found` with a message and starts no new fetch. Adding a CNR whose case was taken down returns `not_found` and stores an `unavailable` item. `not_found`, `error` and `unavailable` items still count toward the cap until removed. Caps are counted after removing duplicates. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request. Free.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
@@ -1432,7 +1478,7 @@
                     "items"
                   ]
                 },
-                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded`. Caps are counted after removing duplicates. A partial success is still HTTP 200. If the whole add would exceed the cap, the call is refused with 403 `WATCH_CAP_EXCEEDED`. Free.",
+                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded` (over the watched CNR cap, over the daily add allowance per account, or over the daily limit on adding CNRs that are not yet in the corpus; the item message says which). Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. A Supreme Court CNR that is not in the corpus is `not_found` at once. A CNR the court portal had nothing for in the last 24 hours is `not_found` with a message and starts no new fetch. Adding a CNR whose case was taken down returns `not_found` and stores an `unavailable` item. `not_found`, `error` and `unavailable` items still count toward the cap until removed. Caps are counted after removing duplicates. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request. Free.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
@@ -1480,7 +1526,7 @@
                     "items"
                   ]
                 },
-                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded`. Caps are counted after removing duplicates. A partial success is still HTTP 200. If the whole add would exceed the cap, the call is refused with 403 `WATCH_CAP_EXCEEDED`. Free.",
+                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded` (over the watched CNR cap, over the daily add allowance per account, or over the daily limit on adding CNRs that are not yet in the corpus; the item message says which). Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. A Supreme Court CNR that is not in the corpus is `not_found` at once. A CNR the court portal had nothing for in the last 24 hours is `not_found` with a message and starts no new fetch. Adding a CNR whose case was taken down returns `not_found` and stores an `unavailable` item. `not_found`, `error` and `unavailable` items still count toward the cap until removed. Caps are counted after removing duplicates. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request. Free.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
@@ -1502,6 +1548,102 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"code\": \"WATCH_CAP_EXCEEDED\",\n  \"message\": \"Your plan watches up to 10 CNRs and the limit is reached.\",\n  \"error\": \"Your plan watches up to 10 CNRs and the limit is reached.\"\n}"
+            },
+            {
+              "name": "200 Daily allowance reached",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items"
+                  ]
+                },
+                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded` (over the watched CNR cap, over the daily add allowance per account, or over the daily limit on adding CNRs that are not yet in the corpus; the item message says which). Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. A Supreme Court CNR that is not in the corpus is `not_found` at once. A CNR the court portal had nothing for in the last 24 hours is `not_found` with a message and starts no new fetch. Adding a CNR whose case was taken down returns `not_found` and stores an `unavailable` item. `not_found`, `error` and `unavailable` items still count toward the cap until removed. Caps are counted after removing duplicates. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request. Free.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"cnr\": \"DLHC010084212021\",\n        \"result\": \"cap_exceeded\",\n        \"message\": \"The daily limit for adding case numbers has been reached. It resets at midnight IST.\"\n      }\n    ],\n    \"itemCount\": 1\n  }\n}"
+            },
+            {
+              "name": "200 Taken down or in cooldown",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items"
+                  ]
+                },
+                "description": "Add 1 to 100 CNRs. Each gets a result in `data.results`: `watching`, `pending` (the CNR is not in the corpus, so a live fetch is started and the item becomes `watching` when the case lands, or `not_found` with a `case.not_found` event if the court has no such case), `invalid`, `duplicate` or `cap_exceeded` (over the watched CNR cap, over the daily add allowance per account, or over the daily limit on adding CNRs that are not yet in the corpus; the item message says which). Two daily limits apply to adding, counted per Indian calendar day: every add that results in a watched or pending item counts toward a daily add allowance per account (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000), and adding CNRs that are not in the corpus yet starts a live fetch, so those also have their own daily limit (Free 20, Pay As You Go 500, Scale 5,000, Enterprise unlimited). Items over either come back `cap_exceeded` with a message. A Supreme Court CNR that is not in the corpus is `not_found` at once. A CNR the court portal had nothing for in the last 24 hours is `not_found` with a message and starts no new fetch. Adding a CNR whose case was taken down returns `not_found` and stores an `unavailable` item. `not_found`, `error` and `unavailable` items still count toward the cap until removed. Caps are counted after removing duplicates. A partial success is still HTTP 200. The call is refused with 403 `WATCH_CAP_EXCEEDED` only when the cap is already full and at least one new CNR was sent. `Idempotency-Key` is honoured on this request. Free.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\"\n    },\n    {\n      \"cnr\": \"not-a-cnr\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"cnr\": \"DLHC010084212021\",\n        \"result\": \"not_found\",\n        \"message\": \"This case is not available.\"\n      },\n      {\n        \"cnr\": \"DLHC010099992022\",\n        \"result\": \"not_found\",\n        \"message\": \"eCourts had no such case when we last looked. Try again tomorrow.\"\n      }\n    ],\n    \"itemCount\": 3\n  }\n}"
             }
           ]
         },
@@ -1529,7 +1671,7 @@
                 {
                   "key": "status",
                   "value": "watching",
-                  "description": "Filter by item status."
+                  "description": "Filter by item status: watching, pending, not_found, error or unavailable."
                 },
                 {
                   "key": "limit",
@@ -1543,7 +1685,7 @@
                 }
               ]
             },
-            "description": "Cursor paginated items. Each item: `cnr`, `reference`, `label`, `status` (`watching`, `pending`, `not_found`, `error`), `caseId`, `court`, `title`, `lastCheckedAt`, `lastChangedAt`, `snapshot` and `addedAt`. Free."
+            "description": "Cursor paginated items. Each item: `cnr`, `reference`, `label`, `status` (`watching`, `pending`, `not_found`, `error`, `unavailable`), `caseId`, `court`, `title`, `lastCheckedAt`, `lastChangedAt`, `snapshot` and `addedAt`. Free. `unavailable` means the case was taken down at a party's request: `caseId`, `court`, `title`, `snapshot`, `lastCheckedAt` and `lastChangedAt` are all null and no events are sent. Dates in `snapshot` are `YYYY-MM-DD`."
           },
           "response": [
             {
@@ -1570,7 +1712,7 @@
                     {
                       "key": "status",
                       "value": "watching",
-                      "description": "Filter by item status."
+                      "description": "Filter by item status: watching, pending, not_found, error or unavailable."
                     },
                     {
                       "key": "limit",
@@ -1584,7 +1726,7 @@
                     }
                   ]
                 },
-                "description": "Cursor paginated items. Each item: `cnr`, `reference`, `label`, `status` (`watching`, `pending`, `not_found`, `error`), `caseId`, `court`, `title`, `lastCheckedAt`, `lastChangedAt`, `snapshot` and `addedAt`. Free."
+                "description": "Cursor paginated items. Each item: `cnr`, `reference`, `label`, `status` (`watching`, `pending`, `not_found`, `error`, `unavailable`), `caseId`, `court`, `title`, `lastCheckedAt`, `lastChangedAt`, `snapshot` and `addedAt`. Free. `unavailable` means the case was taken down at a party's request: `caseId`, `court`, `title`, `snapshot`, `lastCheckedAt` and `lastChangedAt` are all null and no events are sent. Dates in `snapshot` are `YYYY-MM-DD`."
               },
               "status": "OK",
               "code": 200,
@@ -1597,6 +1739,58 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"cnr\": \"DLHC010084212021\",\n      \"reference\": \"LOAN-42\",\n      \"label\": \"Alpha Finance v Beta\",\n      \"status\": \"watching\",\n      \"caseId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"court\": \"Delhi High Court\",\n      \"title\": \"Alpha Finance Ltd vs Beta Traders\",\n      \"lastCheckedAt\": \"2026-11-02T04:10:00.000Z\",\n      \"lastChangedAt\": \"2026-11-02T04:10:00.000Z\",\n      \"snapshot\": {\n        \"caseStatus\": \"Pending\",\n        \"caseStage\": \"Arguments\",\n        \"nextHearingDate\": \"2026-12-04\",\n        \"lastListedOn\": \"2026-11-10\",\n        \"orderCount\": 14,\n        \"latestOrderDate\": \"2026-11-10\",\n        \"disposalNature\": null\n      },\n      \"addedAt\": \"2026-11-02T09:00:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
+            },
+            {
+              "name": "200 Taken down case",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/watchlists/{{watchlistId}}/items?status=watching&limit=50&cursor=",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "watchlists",
+                    "{{watchlistId}}",
+                    "items"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "watching",
+                      "description": "Filter by item status: watching, pending, not_found, error or unavailable."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "1 to 100."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Pass the previous pagination.nextCursor to get the next page."
+                    }
+                  ]
+                },
+                "description": "Cursor paginated items. Each item: `cnr`, `reference`, `label`, `status` (`watching`, `pending`, `not_found`, `error`, `unavailable`), `caseId`, `court`, `title`, `lastCheckedAt`, `lastChangedAt`, `snapshot` and `addedAt`. Free. `unavailable` means the case was taken down at a party's request: `caseId`, `court`, `title`, `snapshot`, `lastCheckedAt` and `lastChangedAt` are all null and no events are sent. Dates in `snapshot` are `YYYY-MM-DD`."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"cnr\": \"DLHC010099992022\",\n      \"reference\": \"LOAN-43\",\n      \"label\": null,\n      \"status\": \"unavailable\",\n      \"caseId\": null,\n      \"court\": null,\n      \"title\": null,\n      \"lastCheckedAt\": null,\n      \"lastChangedAt\": null,\n      \"snapshot\": null,\n      \"addedAt\": \"2026-11-02T09:00:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": null,\n    \"hasMore\": false\n  }\n}"
             }
           ]
         },
@@ -1781,7 +1975,7 @@
                 }
               ]
             },
-            "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing."
+            "description": "The change feed across all your watchlists, oldest first, in the order the events were recorded. 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is opaque (store it and send it back, never build or parse it) and is always returned, even on an empty page, so a client can poll forward indefinitely. `since` is converted to a feed position once; the cursor you get back continues from there.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing.\n\n`case.tracking_started` is sent once the first fresh refresh of a case completes (immediately if the stored record is already current), not at the moment of the add. A burst of new orders announces only the newest 20, oldest first, and an order dated more than 7 days before you started watching is never announced to you. A case taken down at a party's request sends no events."
           },
           "response": [
             {
@@ -1830,7 +2024,7 @@
                     }
                   ]
                 },
-                "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`."
+                "description": "The change feed across all your watchlists, oldest first, in the order the events were recorded. 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is opaque (store it and send it back, never build or parse it) and is always returned, even on an empty page, so a client can poll forward indefinitely. `since` is converted to a feed position once; the cursor you get back continues from there.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing.\n\n`case.tracking_started` is sent once the first fresh refresh of a case completes (immediately if the stored record is already current), not at the moment of the add. A burst of new orders announces only the newest 20, oldest first, and an order dated more than 7 days before you started watching is never announced to you. A case taken down at a party's request sends no events."
               },
               "status": "OK",
               "code": 200,
@@ -1842,7 +2036,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"evt_6710d0c41a2b\",\n      \"type\": \"case.hearing_date_changed\",\n      \"createdAt\": \"2026-11-02T09:15:00.000Z\",\n      \"cnr\": \"DLHC010084212021\",\n      \"caseId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"watchlists\": [\n        {\n          \"id\": \"wl_6710c9a71f3b\",\n          \"reference\": \"LOAN-42\"\n        }\n      ],\n      \"data\": {\n        \"previous\": \"2026-11-10\",\n        \"current\": \"2026-12-04\",\n        \"snapshot\": {\n          \"caseStatus\": \"Pending\",\n          \"caseStage\": \"Arguments\",\n          \"nextHearingDate\": \"2026-12-04\",\n          \"lastListedOn\": \"2026-11-10\",\n          \"orderCount\": 14,\n          \"latestOrderDate\": \"2026-11-10\",\n          \"disposalNature\": null\n        }\n      }\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": \"eyJ0IjoiMjAyNi0xMS0wMlQwOToxNTowMC4wMDBaIiwiaSI6ImV2dF82NzEwZDBjNDFhMmIifQ\",\n    \"hasMore\": true\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"evt_6710d0c41a2b\",\n      \"type\": \"case.hearing_date_changed\",\n      \"createdAt\": \"2026-11-02T09:15:00.000Z\",\n      \"cnr\": \"DLHC010084212021\",\n      \"caseId\": \"6710b2f4a1c9e2d3f4a5b6c7\",\n      \"watchlists\": [\n        {\n          \"id\": \"wl_6710c9a71f3b\",\n          \"reference\": \"LOAN-42\"\n        }\n      ],\n      \"data\": {\n        \"previous\": \"2026-11-10\",\n        \"current\": \"2026-12-04\",\n        \"snapshot\": {\n          \"caseStatus\": \"Pending\",\n          \"caseStage\": \"Arguments\",\n          \"nextHearingDate\": \"2026-12-04\",\n          \"lastListedOn\": \"2026-11-10\",\n          \"orderCount\": 14,\n          \"latestOrderDate\": \"2026-11-10\",\n          \"disposalNature\": null\n        }\n      }\n    }\n  ],\n  \"pagination\": {\n    \"nextCursor\": \"Q3VyUzNxVWVuY2UtT3BhcXVlLVNpZ25lZA\",\n    \"hasMore\": true\n  }\n}"
             },
             {
               "name": "200 Caught up (empty page, free)",
@@ -1890,7 +2084,7 @@
                     }
                   ]
                 },
-                "description": "The change feed across all your watchlists, oldest first (by `createdAt`, then `id`). 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is always returned, even on an empty page, so a client can store it and poll forward indefinitely.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`."
+                "description": "The change feed across all your watchlists, oldest first, in the order the events were recorded. 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is opaque (store it and send it back, never build or parse it) and is always returned, even on an empty page, so a client can poll forward indefinitely. `since` is converted to a feed position once; the cursor you get back continues from there.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing.\n\n`case.tracking_started` is sent once the first fresh refresh of a case completes (immediately if the stored record is already current), not at the moment of the add. A burst of new orders announces only the newest 20, oldest first, and an order dated more than 7 days before you started watching is never announced to you. A case taken down at a party's request sends no events."
               },
               "status": "OK",
               "code": 200,
@@ -1902,7 +2096,67 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": [],\n  \"pagination\": {\n    \"nextCursor\": \"eyJ0IjoiMjAyNi0xMS0wMlQwOToxNTowMC4wMDBaIiwiaSI6ImV2dF82NzEwZDBjNDFhMmIifQ\",\n    \"hasMore\": false\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [],\n  \"pagination\": {\n    \"nextCursor\": \"Q3VyUzNxVWVuY2UtT3BhcXVlLVNpZ25lZA\",\n    \"hasMore\": false\n  }\n}"
+            },
+            {
+              "name": "400 Validation error (query)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/changes?cursor={{changesCursor}}&since=2026-11-01T00:00:00Z&types=case.order_added,case.hearing_date_changed&cnr=&limit=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "changes"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "{{changesCursor}}",
+                      "description": "Opaque cursor from the previous pagination.nextCursor. Takes priority over since."
+                    },
+                    {
+                      "key": "since",
+                      "value": "2026-11-01T00:00:00Z",
+                      "description": "ISO timestamp, used when there is no cursor."
+                    },
+                    {
+                      "key": "types",
+                      "value": "case.order_added,case.hearing_date_changed",
+                      "description": "Comma separated event types."
+                    },
+                    {
+                      "key": "cnr",
+                      "value": "",
+                      "description": "Only events for this CNR."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "100",
+                      "description": "1 to 100, default 100."
+                    }
+                  ]
+                },
+                "description": "The change feed across all your watchlists, oldest first, in the order the events were recorded. 1 credit per page of up to 100 events; an empty page costs 0. `pagination.nextCursor` is opaque (store it and send it back, never build or parse it) and is always returned, even on an empty page, so a client can poll forward indefinitely. `since` is converted to a feed position once; the cursor you get back continues from there.\n\nEvent types: `case.tracking_started`, `case.order_added`, `case.hearing_date_changed`, `case.status_changed`, `case.stage_changed`, `case.disposed`, `case.not_found`, `webhook.test`. The event object is identical to the webhook body. Events are kept for 90 days. Delivery over webhooks is at least once, so dedupe on `id`. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing.\n\n`case.tracking_started` is sent once the first fresh refresh of a case completes (immediately if the stored record is already current), not at the moment of the add. A burst of new orders announces only the newest 20, oldest first, and an order dated more than 7 days before you started watching is never announced to you. A case taken down at a party's request sends no events."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"details\": [\n    \"limit: limit cannot exceed 100.\"\n  ]\n}"
             }
           ]
         },
@@ -1954,7 +2208,7 @@
                 }
               ]
             },
-            "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing."
+            "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing. Cursors are opaque; see `GET /changes`."
           },
           "response": [
             {
@@ -2005,7 +2259,7 @@
                     }
                   ]
                 },
-                "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist."
+                "description": "Same as `GET /changes`, same query and pricing (1 credit per non-empty page), filtered to one watchlist. An event appears in the feed about 2 seconds after it is created. `types` values outside the known list match nothing. Cursors are opaque; see `GET /changes`."
               },
               "status": "OK",
               "code": 200,
@@ -2044,7 +2298,7 @@
                 "webhooks"
               ]
             },
-            "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Returns HTTP 201. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+            "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. Without `events` the response and later reads echo the full default `case.*` list; without `watchlistIds` they echo `[]`, which means all watchlists. `Idempotency-Key` is honoured on this request. At most 10 endpoints per account. Returns HTTP 201. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds (each attempt reads at most 64 KB of your response); redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`. A delivery that could not be attempted within 24 hours is marked `failed` with `lastError: \"expired\"` instead of being sent.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
@@ -2079,7 +2333,7 @@
                     "webhooks"
                   ]
                 },
-                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. Without `events` the response and later reads echo the full default `case.*` list; without `watchlistIds` they echo `[]`, which means all watchlists. `Idempotency-Key` is honoured on this request. At most 10 endpoints per account. Returns HTTP 201. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds (each attempt reads at most 64 KB of your response); redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`. A delivery that could not be attempted within 24 hours is marked `failed` with `lastError: \"expired\"` instead of being sent.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
@@ -2125,7 +2379,7 @@
                     "webhooks"
                   ]
                 },
-                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. Without `events` the response and later reads echo the full default `case.*` list; without `watchlistIds` they echo `[]`, which means all watchlists. `Idempotency-Key` is honoured on this request. At most 10 endpoints per account. Returns HTTP 201. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds (each attempt reads at most 64 KB of your response); redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`. A delivery that could not be attempted within 24 hours is marked `failed` with `lastError: \"expired\"` instead of being sent.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
@@ -2171,7 +2425,7 @@
                     "webhooks"
                   ]
                 },
-                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. At most 10 endpoints per account. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds; redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`.",
+                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. Without `events` the response and later reads echo the full default `case.*` list; without `watchlistIds` they echo `[]`, which means all watchlists. `Idempotency-Key` is honoured on this request. At most 10 endpoints per account. Returns HTTP 201. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds (each attempt reads at most 64 KB of your response); redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`. A delivery that could not be attempted within 24 hours is marked `failed` with `lastError: \"expired\"` instead of being sent.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
@@ -2193,6 +2447,52 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"code\": \"WEBHOOK_LIMIT_REACHED\",\n  \"message\": \"An account can have up to 10 webhook endpoints.\",\n  \"error\": \"An account can have up to 10 webhook endpoints.\"\n}"
+            },
+            {
+              "name": "201 Created with defaults",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "webhooks"
+                  ]
+                },
+                "description": "Register an HTTPS endpoint. Body: `{ url, events? (default all case.* types), watchlistIds? (default all), description? (up to 200 chars) }`. Without `events` the response and later reads echo the full default `case.*` list; without `watchlistIds` they echo `[]`, which means all watchlists. `Idempotency-Key` is honoured on this request. At most 10 endpoints per account. Returns HTTP 201. Free.\n\nThe response includes `secret` (`whsec_` plus 32 random bytes, base64url), shown only here and on rotate. Store it: use it with the SDK helper `verifyWebhookSignature` / `verify_webhook_signature`.\n\nURL rules: https only, port 443 or any non privileged port, and the hostname must resolve to a public address at create time and again at every delivery.\n\nEach delivery is a POST with the event as JSON and headers `CourtMesh-Event-Id`, `CourtMesh-Event-Type`, `CourtMesh-Delivery-Id` and `CourtMesh-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>` (two `v1=` values during a secret rotation). Success is any 2xx within 10 seconds (each attempt reads at most 64 KB of your response); redirects are not followed. Retries after 1 min, 5 min, 30 min, 2 h, 6 h, 12 h and 24 h, then `failed`. A delivery that could not be attempted within 24 hours is marked `failed` with `lastError: \"expired\"` instead of being sent.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"https://example.com/hooks/courtmesh\",\n  \"events\": [\n    \"case.hearing_date_changed\",\n    \"case.order_added\"\n  ],\n  \"watchlistIds\": [\n    \"{{watchlistId}}\"\n  ],\n  \"description\": \"Collections system\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"wh_6710d1e52c3e\",\n    \"url\": \"https://example.com/hooks/courtmesh\",\n    \"events\": [\n      \"case.tracking_started\",\n      \"case.order_added\",\n      \"case.hearing_date_changed\",\n      \"case.status_changed\",\n      \"case.stage_changed\",\n      \"case.disposed\",\n      \"case.not_found\"\n    ],\n    \"watchlistIds\": [],\n    \"description\": null,\n    \"enabled\": true,\n    \"disabledReason\": null,\n    \"createdAt\": \"2026-11-02T09:05:00.000Z\",\n    \"updatedAt\": \"2026-11-02T09:05:00.000Z\",\n    \"secret\": \"whsec_Zm9yX2RvY3NfdXNlX29ubHlfbm90X2FfcmVhbF9zZWNyZXQ\",\n    \"secretRotating\": false\n  }\n}"
             }
           ]
         },
@@ -2596,7 +2896,7 @@
                 "test"
               ]
             },
-            "description": "Sends a `webhook.test` event to the endpoint now, as a single attempt that is never retried, and returns the delivery object (`status` is `succeeded` or `failed`). Free."
+            "description": "Sends a `webhook.test` event to the endpoint now, as a single attempt that is never retried (it is sent even if the endpoint is switched off, and does not count toward its failure streak; the attempt has a hard 10 second deadline and reads at most 64 KB of your response), and returns the delivery object (`status` is `succeeded` or `failed`). Free."
           },
           "response": [
             {
@@ -2620,7 +2920,7 @@
                     "test"
                   ]
                 },
-                "description": "Sends a `webhook.test` event to the endpoint now and returns the delivery attempt result. Free."
+                "description": "Sends a `webhook.test` event to the endpoint now, as a single attempt that is never retried (it is sent even if the endpoint is switched off, and does not count toward its failure streak; the attempt has a hard 10 second deadline and reads at most 64 KB of your response), and returns the delivery object (`status` is `succeeded` or `failed`). Free."
               },
               "status": "OK",
               "code": 200,
@@ -2655,7 +2955,7 @@
                     "test"
                   ]
                 },
-                "description": "Sends a `webhook.test` event to the endpoint now and returns the delivery attempt result. Free."
+                "description": "Sends a `webhook.test` event to the endpoint now, as a single attempt that is never retried (it is sent even if the endpoint is switched off, and does not count toward its failure streak; the attempt has a hard 10 second deadline and reads at most 64 KB of your response), and returns the delivery object (`status` is `succeeded` or `failed`). Free."
               },
               "status": "OK",
               "code": 200,
@@ -2704,7 +3004,7 @@
                 }
               ]
             },
-            "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Newest first; delivery history is kept 30 days. Free."
+            "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Newest first; delivery history is kept 30 days. A delivery that was never attempted for 24 hours is `failed` with `lastError` `expired`. Free."
           },
           "response": [
             {
@@ -2740,7 +3040,7 @@
                     }
                   ]
                 },
-                "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Free."
+                "description": "Cursor paginated delivery attempts: `id` (`whd_`), `eventId`, `eventType`, `status` (`pending`, `succeeded`, `failed`), `attempts`, `lastAttemptAt`, `nextAttemptAt`, `lastResponseStatus`, `lastError`, `createdAt`. Newest first; delivery history is kept 30 days. A delivery that was never attempted for 24 hours is `failed` with `lastError` `expired`. Free."
               },
               "status": "OK",
               "code": 200,
