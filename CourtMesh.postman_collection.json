@@ -2,10 +2,10 @@
   "info": {
     "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
     "name": "CourtMesh API: Indian Court Cases",
-    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n| actSlug | An act slug such as indian-penal-code-1860, used by the Acts and Sections requests |\n| sectionSlug | A provision slug such as section-302, used by the Acts and Sections requests |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /acts/search | Acts and Sections |\n| GET | /acts/resolve | Acts and Sections |\n| GET | /acts/{slug} | Acts and Sections |\n| GET | /acts/{slug}/history | Acts and Sections |\n| GET | /acts/{slug}/sections | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug} | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug}/citing-cases | Acts and Sections |\n| GET | /sections/search | Acts and Sections |\n| GET | /sections/lookup | Acts and Sections |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "courtmesh",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "auth": {
     "type": "bearer",
@@ -106,6 +106,18 @@
       "value": "",
       "type": "string",
       "description": "The pagination.nextCursor from the previous List changes call."
+    },
+    {
+      "key": "actSlug",
+      "value": "indian-penal-code-1860",
+      "type": "string",
+      "description": "An act slug, for example indian-penal-code-1860, from Resolve a short form to an act or Search acts."
+    },
+    {
+      "key": "sectionSlug",
+      "value": "section-302",
+      "type": "string",
+      "description": "A provision slug, for example section-302, from List the sections of an act or Look up a section from a citation."
     }
   ],
   "item": [
@@ -3155,6 +3167,1102 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"code\": \"DELIVERY_NOT_FOUND\",\n  \"message\": \"Delivery not found.\",\n  \"error\": \"Delivery not found.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Acts and Sections",
+      "description": "Indian statutes: find an act, read a provision with its amendment notes, follow what replaced a repealed law, and list judgments citing a provision. Text is the statute as published, with no commentary. Each request costs 1 credit when it returns something and nothing otherwise. Repeal status is on every response, so check it before relying on a provision. Use `GET /acts/resolve` or `GET /sections/lookup` to get the slugs the other requests need. The citing judgments list is not exhaustive and an empty list does not mean no judgment applied the provision. Act history is at act level and does not map old sections to new ones. New error codes: `ACT_NOT_FOUND`, `SECTION_NOT_FOUND`. API keys with explicit scopes need the `legislation` scope.",
+      "item": [
+        {
+          "name": "Search acts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/acts/search?q=negotiable instruments&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acts",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "negotiable instruments",
+                  "description": "Words from the title or subject, or a short form. 2 to 200 characters."
+                },
+                {
+                  "key": "docClass",
+                  "value": "act",
+                  "description": "One of act, ordinance, rule, regulation, amendment_act, constitution, code.",
+                  "disabled": true
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "central",
+                  "description": "One of central, state, union_territory.",
+                  "disabled": true
+                },
+                {
+                  "key": "yearFrom",
+                  "value": "1880",
+                  "description": "Earliest year of enactment.",
+                  "disabled": true
+                },
+                {
+                  "key": "yearTo",
+                  "value": "2000",
+                  "description": "Latest year of enactment.",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "1 to 1000, default 1."
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "1 to 100, default 20, and no more than your plan allows."
+                }
+              ]
+            },
+            "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope."
+          },
+          "response": [
+            {
+              "name": "200 Matching acts",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/search?q=negotiable instruments&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "negotiable instruments",
+                      "description": "Words from the title or subject, or a short form. 2 to 200 characters."
+                    },
+                    {
+                      "key": "docClass",
+                      "value": "act",
+                      "description": "One of act, ordinance, rule, regulation, amendment_act, constitution, code.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "jurisdiction",
+                      "value": "central",
+                      "description": "One of central, state, union_territory.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "yearFrom",
+                      "value": "1880",
+                      "description": "Earliest year of enactment.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "yearTo",
+                      "value": "2000",
+                      "description": "Latest year of enactment.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "1 to 1000, default 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"slug\": \"indian-penal-code-1860\",\n      \"title\": \"The Indian Penal Code, 1860\",\n      \"docClass\": \"act\",\n      \"year\": 1860,\n      \"number\": \"45\",\n      \"citation\": \"Act 45 of 1860\",\n      \"jurisdiction\": \"central\",\n      \"stateName\": null,\n      \"aliases\": [\n        \"IPC\",\n        \"Indian Penal Code\",\n        \"Penal Code\"\n      ],\n      \"repealed\": true,\n      \"repealNote\": \"Repealed by the Bharatiya Nyaya Sanhita, 2023, with effect from 1 July 2024\"\n    }\n  ],\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true,\n    \"weakMatch\": false\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"totalPages\": 1,\n    \"hasMore\": false\n  }\n}"
+            },
+            {
+              "name": "400 Validation error (query)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/search?q=negotiable instruments&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "negotiable instruments",
+                      "description": "Words from the title or subject, or a short form. 2 to 200 characters."
+                    },
+                    {
+                      "key": "docClass",
+                      "value": "act",
+                      "description": "One of act, ordinance, rule, regulation, amendment_act, constitution, code.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "jurisdiction",
+                      "value": "central",
+                      "description": "One of central, state, union_territory.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "yearFrom",
+                      "value": "1880",
+                      "description": "Earliest year of enactment.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "yearTo",
+                      "value": "2000",
+                      "description": "Latest year of enactment.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "1 to 1000, default 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"details\": [\n    \"q must have at least 2 characters.\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Resolve a short form to an act",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/acts/resolve?q=IPC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acts",
+                "resolve"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "IPC",
+                  "description": "A short form or an act name. 2 to 200 characters."
+                }
+              ]
+            },
+            "description": "Turns what a lawyer writes (IPC, NI Act, Cr.P.C.) into the act, returning up to five candidates, best first. Costs 1 credit when it returns something; an empty result costs nothing. `matchedBy` is `short_form` for an exact match on a known short form, or `text`. Use the returned `slug` in the requests that follow."
+          },
+          "response": [
+            {
+              "name": "200 Candidates, best first",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/resolve?q=IPC",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "resolve"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "IPC",
+                      "description": "A short form or an act name. 2 to 200 characters."
+                    }
+                  ]
+                },
+                "description": "Turns what a lawyer writes (IPC, NI Act, Cr.P.C.) into the act, returning up to five candidates, best first. Costs 1 credit when it returns something; an empty result costs nothing. `matchedBy` is `short_form` for an exact match on a known short form, or `text`. Use the returned `slug` in the requests that follow."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"query\": \"IPC\",\n    \"matches\": [\n      {\n        \"act\": {\n          \"slug\": \"indian-penal-code-1860\",\n          \"title\": \"The Indian Penal Code, 1860\",\n          \"docClass\": \"act\",\n          \"year\": 1860,\n          \"number\": \"45\",\n          \"citation\": \"Act 45 of 1860\",\n          \"jurisdiction\": \"central\",\n          \"stateName\": null,\n          \"aliases\": [\n            \"IPC\",\n            \"Indian Penal Code\",\n            \"Penal Code\"\n          ],\n          \"repealed\": true,\n          \"repealNote\": \"Repealed by the Bharatiya Nyaya Sanhita, 2023, with effect from 1 July 2024\"\n        },\n        \"matchedBy\": \"short_form\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true,\n    \"weakMatch\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get an act",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/acts/{{actSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acts",
+                "{{actSlug}}"
+              ]
+            },
+            "description": "The act's details and repeal status, without its text. Costs 1 credit when it returns something; an empty result costs nothing. `textSource` is `sections` when the act has a table of contents, or `full-text` when it was published only as one document and has no provisions to list. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged. Get a slug from the resolve or search requests; set the `actSlug` collection variable."
+          },
+          "response": [
+            {
+              "name": "200 The act",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}"
+                  ]
+                },
+                "description": "The act's details and repeal status, without its text. Costs 1 credit when it returns something; an empty result costs nothing. `textSource` is `sections` when the act has a table of contents, or `full-text` when it was published only as one document and has no provisions to list. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged. Get a slug from the resolve or search requests; set the `actSlug` collection variable."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"slug\": \"indian-penal-code-1860\",\n    \"title\": \"The Indian Penal Code, 1860\",\n    \"docClass\": \"act\",\n    \"year\": 1860,\n    \"number\": \"45\",\n    \"citation\": \"Act 45 of 1860\",\n    \"jurisdiction\": \"central\",\n    \"stateName\": null,\n    \"aliases\": [\n      \"IPC\",\n      \"Indian Penal Code\",\n      \"Penal Code\"\n    ],\n    \"repealed\": true,\n    \"repealNote\": \"Repealed by the Bharatiya Nyaya Sanhita, 2023, with effect from 1 July 2024\",\n    \"shortTitle\": \"Indian Penal Code\",\n    \"longTitle\": null,\n    \"ministryName\": null,\n    \"subjects\": [\n      \"criminal\"\n    ],\n    \"textSource\": \"sections\",\n    \"sectionCount\": 511,\n    \"textNote\": null\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  }\n}"
+            },
+            {
+              "name": "404 Act not found, not charged",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}"
+                  ]
+                },
+                "description": "The act's details and repeal status, without its text. Costs 1 credit when it returns something; an empty result costs nothing. `textSource` is `sections` when the act has a table of contents, or `full-text` when it was published only as one document and has no provisions to list. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged. Get a slug from the resolve or search requests; set the `actSlug` collection variable."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"ACT_NOT_FOUND\",\n  \"message\": \"No published act matches this slug.\",\n  \"error\": \"No published act matches this slug.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get the history of an act",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/acts/{{actSlug}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acts",
+                "{{actSlug}}",
+                "history"
+              ]
+            },
+            "description": "The act level history: what repealed it, the acts that amended it, State amendments, other editions, and rules or notifications made under it. This does not map old sections to new ones. Costs 1 credit when it returns something; an empty result costs nothing. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged."
+          },
+          "response": [
+            {
+              "name": "200 The history",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/history",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "history"
+                  ]
+                },
+                "description": "The act level history: what repealed it, the acts that amended it, State amendments, other editions, and rules or notifications made under it. This does not map old sections to new ones. Costs 1 credit when it returns something; an empty result costs nothing. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"slug\": \"indian-penal-code-1860\",\n    \"succession\": [\n      {\n        \"note\": \"Repealed by the Bharatiya Nyaya Sanhita, 2023, with effect from 1 July 2024\",\n        \"byTitle\": \"The Bharatiya Nyaya Sanhita, 2023\",\n        \"byCitation\": null,\n        \"bySlug\": \"bharatiya-nyaya-sanhita-2023\"\n      }\n    ],\n    \"amendments\": [\n      {\n        \"slug\": null,\n        \"title\": \"The Criminal Law (Amendment) Act, 2013\",\n        \"year\": 2013,\n        \"number\": \"13\",\n        \"citation\": null,\n        \"sourceUrl\": null\n      }\n    ],\n    \"stateAmendments\": [],\n    \"editions\": [],\n    \"instruments\": [],\n    \"instrumentCounts\": {}\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  }\n}"
+            },
+            {
+              "name": "404 Act not found, not charged",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/history",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "history"
+                  ]
+                },
+                "description": "The act level history: what repealed it, the acts that amended it, State amendments, other editions, and rules or notifications made under it. This does not map old sections to new ones. Costs 1 credit when it returns something; an empty result costs nothing. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"ACT_NOT_FOUND\",\n  \"message\": \"No published act matches this slug.\",\n  \"error\": \"No published act matches this slug.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List the sections of an act",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/acts/{{actSlug}}/sections?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acts",
+                "{{actSlug}}",
+                "sections"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "1 to 1000, default 1."
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "1 to 100, default 20, and no more than your plan allows."
+                }
+              ]
+            },
+            "description": "The provisions of an act in order, without their text. An act published only as one document has none. Costs 1 credit when it returns something; an empty result costs nothing. `citationCount` is the number of judgments recorded as citing the provision, not an exhaustive count. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged."
+          },
+          "response": [
+            {
+              "name": "200 One page of provisions",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "1 to 1000, default 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "The provisions of an act in order, without their text. An act published only as one document has none. Costs 1 credit when it returns something; an empty result costs nothing. `citationCount` is the number of judgments recorded as citing the provision, not an exhaustive count. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"actSlug\": \"indian-penal-code-1860\",\n      \"slug\": \"section-302\",\n      \"partType\": \"section\",\n      \"number\": \"302\",\n      \"heading\": \"Punishment for murder\",\n      \"citationCount\": 1200,\n      \"repealedProvision\": false\n    }\n  ],\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"totalPages\": 1,\n    \"hasMore\": false\n  }\n}"
+            },
+            {
+              "name": "404 Act not found, not charged",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "1 to 1000, default 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "The provisions of an act in order, without their text. An act published only as one document has none. Costs 1 credit when it returns something; an empty result costs nothing. `citationCount` is the number of judgments recorded as citing the provision, not an exhaustive count. A slug that does not exist is 404 `ACT_NOT_FOUND`, not charged."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"ACT_NOT_FOUND\",\n  \"message\": \"No published act matches this slug.\",\n  \"error\": \"No published act matches this slug.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get a section",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acts",
+                "{{actSlug}}",
+                "sections",
+                "{{sectionSlug}}"
+              ]
+            },
+            "description": "The provision's full text, structured into blocks, with its amendment notes and repeal status. Costs 1 credit when it returns something; an empty result costs nothing. Check `actRepealed` and `repealedProvision` before relying on the text. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged. Set the `actSlug` and `sectionSlug` collection variables."
+          },
+          "response": [
+            {
+              "name": "200 The provision",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections",
+                    "{{sectionSlug}}"
+                  ]
+                },
+                "description": "The provision's full text, structured into blocks, with its amendment notes and repeal status. Costs 1 credit when it returns something; an empty result costs nothing. Check `actRepealed` and `repealedProvision` before relying on the text. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged. Set the `actSlug` and `sectionSlug` collection variables."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"actSlug\": \"indian-penal-code-1860\",\n    \"slug\": \"section-302\",\n    \"partType\": \"section\",\n    \"number\": \"302\",\n    \"heading\": \"Punishment for murder\",\n    \"actTitle\": \"The Indian Penal Code, 1860\",\n    \"actYear\": 1860,\n    \"jurisdiction\": \"central\",\n    \"stateName\": null,\n    \"citationCount\": 1200,\n    \"repealedProvision\": false,\n    \"actRepealed\": true,\n    \"actRepealNote\": \"Repealed by the Bharatiya Nyaya Sanhita, 2023, with effect from 1 July 2024\",\n    \"textNote\": null,\n    \"text\": \"Whoever commits murder shall be punished with death, or imprisonment for life, and shall also be liable to fine.\",\n    \"blocks\": [\n      {\n        \"depth\": 0,\n        \"kind\": \"paragraph\",\n        \"marker\": null,\n        \"text\": \"Whoever commits murder shall be punished with death, or imprisonment for life, and shall also be liable to fine.\"\n      }\n    ],\n    \"amendments\": [],\n    \"previous\": {\n      \"slug\": \"section-301\",\n      \"label\": \"Section 301\"\n    },\n    \"next\": {\n      \"slug\": \"section-303\",\n      \"label\": \"Section 303\"\n    }\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  }\n}"
+            },
+            {
+              "name": "404 Provision not found, not charged",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections",
+                    "{{sectionSlug}}"
+                  ]
+                },
+                "description": "The provision's full text, structured into blocks, with its amendment notes and repeal status. Costs 1 credit when it returns something; an empty result costs nothing. Check `actRepealed` and `repealedProvision` before relying on the text. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged. Set the `actSlug` and `sectionSlug` collection variables."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"SECTION_NOT_FOUND\",\n  \"message\": \"No published provision matches this act and section.\",\n  \"error\": \"No published provision matches this act and section.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List judgments citing a section",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}/citing-cases?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "acts",
+                "{{actSlug}}",
+                "sections",
+                "{{sectionSlug}}",
+                "citing-cases"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "Opaque cursor from `pagination.nextCursor`. Valid only for the provision it was issued for. Enable it to fetch the next page.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "1 to 100, default 20, and no more than your plan allows."
+                }
+              ]
+            },
+            "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+          },
+          "response": [
+            {
+              "name": "200 One page of citing judgments",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}/citing-cases?limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections",
+                    "{{sectionSlug}}",
+                    "citing-cases"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Opaque cursor from `pagination.nextCursor`. Valid only for the provision it was issued for. Enable it to fetch the next page.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"section\": {\n      \"actSlug\": \"indian-penal-code-1860\",\n      \"slug\": \"section-302\",\n      \"number\": \"302\"\n    },\n    \"listAvailable\": true,\n    \"note\": \"Not an exhaustive list of every judgment applying this provision. An empty list does not mean no judgment applied it.\",\n    \"total\": 1,\n    \"totalIsLowerBound\": false,\n    \"cases\": [\n      {\n        \"id\": \"65f0c0ffee0000000000abcd\",\n        \"title\": \"State v. Example\",\n        \"court\": \"Delhi High Court\",\n        \"courtType\": \"High Court\",\n        \"cnr\": \"DLHC010084212021\",\n        \"caseNumber\": \"CRL.A. 12/2021\",\n        \"decisionDate\": \"2024-05-06\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"limit\": 20,\n    \"hasMore\": false,\n    \"nextCursor\": null\n  }\n}"
+            },
+            {
+              "name": "404 Provision not found, not charged",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}/citing-cases?limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections",
+                    "{{sectionSlug}}",
+                    "citing-cases"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Opaque cursor from `pagination.nextCursor`. Valid only for the provision it was issued for. Enable it to fetch the next page.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"SECTION_NOT_FOUND\",\n  \"message\": \"No published provision matches this act and section.\",\n  \"error\": \"No published provision matches this act and section.\"\n}"
+            },
+            {
+              "name": "502 Temporarily unavailable, not charged, safe to retry",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}/citing-cases?limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections",
+                    "{{sectionSlug}}",
+                    "citing-cases"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Opaque cursor from `pagination.nextCursor`. Valid only for the provision it was issued for. Enable it to fetch the next page.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"UPSTREAM_UNAVAILABLE\",\n  \"message\": \"Citing judgments are temporarily unavailable. Please try again shortly.\",\n  \"error\": \"Citing judgments are temporarily unavailable. Please try again shortly.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search the text of sections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sections/search?q=punishment for murder&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sections",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "punishment for murder",
+                  "description": "Words to find in the provision. 2 to 200 characters."
+                },
+                {
+                  "key": "act",
+                  "value": "indian-penal-code-1860",
+                  "description": "An act slug. Enable it to narrow the search to one act.",
+                  "disabled": true
+                },
+                {
+                  "key": "number",
+                  "value": "498A",
+                  "description": "Only provisions with this exact number.",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "1 to 1000, default 1."
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "1 to 100, default 20, and no more than your plan allows."
+                }
+              ]
+            },
+            "description": "Full text search across provisions, with a short snippet per row. Narrow it to one act with `act`, or to an exact provision number with `number`. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. Check `actRepealed` and `repealedProvision` on each row. Costs 1 credit when it returns something; an empty result costs nothing."
+          },
+          "response": [
+            {
+              "name": "200 Matching provisions",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sections/search?q=punishment for murder&page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sections",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "punishment for murder",
+                      "description": "Words to find in the provision. 2 to 200 characters."
+                    },
+                    {
+                      "key": "act",
+                      "value": "indian-penal-code-1860",
+                      "description": "An act slug. Enable it to narrow the search to one act.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "number",
+                      "value": "498A",
+                      "description": "Only provisions with this exact number.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "1 to 1000, default 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "Full text search across provisions, with a short snippet per row. Narrow it to one act with `act`, or to an exact provision number with `number`. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. Check `actRepealed` and `repealedProvision` on each row. Costs 1 credit when it returns something; an empty result costs nothing."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"actSlug\": \"indian-penal-code-1860\",\n      \"slug\": \"section-302\",\n      \"partType\": \"section\",\n      \"number\": \"302\",\n      \"heading\": \"Punishment for murder\",\n      \"actTitle\": \"The Indian Penal Code, 1860\",\n      \"actYear\": 1860,\n      \"jurisdiction\": \"central\",\n      \"stateName\": null,\n      \"citationCount\": 1200,\n      \"repealedProvision\": false,\n      \"actRepealed\": true,\n      \"actRepealNote\": \"Repealed by the Bharatiya Nyaya Sanhita, 2023, with effect from 1 July 2024\",\n      \"snippet\": \"Whoever commits murder shall be punished with death...\"\n    }\n  ],\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"totalPages\": 1,\n    \"hasMore\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Look up a section from a citation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sections/lookup?q=section 302 IPC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sections",
+                "lookup"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "section 302 IPC",
+                  "description": "A citation such as section 302 IPC, s.138 NI Act or Article 21. 1 to 200 characters."
+                }
+              ]
+            },
+            "description": "Turns shorthand such as \"section 302 IPC\", \"s.138 NI Act\" or \"Article 21\" into the provision it names. A lettered section keeps its letter, so 498A is never answered with 498. \"Order VII Rule 11 CPC\" is not resolved and returns no match. `ambiguous` is true when no act was named, and the caller should then choose or name the act. Costs 1 credit when it returns something; an empty result costs nothing."
+          },
+          "response": [
+            {
+              "name": "200 Provisions the citation could name",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sections/lookup?q=section 302 IPC",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sections",
+                    "lookup"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "section 302 IPC",
+                      "description": "A citation such as section 302 IPC, s.138 NI Act or Article 21. 1 to 200 characters."
+                    }
+                  ]
+                },
+                "description": "Turns shorthand such as \"section 302 IPC\", \"s.138 NI Act\" or \"Article 21\" into the provision it names. A lettered section keeps its letter, so 498A is never answered with 498. \"Order VII Rule 11 CPC\" is not resolved and returns no match. `ambiguous` is true when no act was named, and the caller should then choose or name the act. Costs 1 credit when it returns something; an empty result costs nothing."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"query\": \"section 302 IPC\",\n    \"matches\": [\n      {\n        \"section\": {\n          \"actSlug\": \"indian-penal-code-1860\",\n          \"slug\": \"section-302\",\n          \"partType\": \"section\",\n          \"number\": \"302\",\n          \"heading\": \"Punishment for murder\",\n          \"actTitle\": \"The Indian Penal Code, 1860\",\n          \"actYear\": 1860,\n          \"jurisdiction\": \"central\",\n          \"stateName\": null,\n          \"citationCount\": 1200,\n          \"repealedProvision\": false,\n          \"actRepealed\": true,\n          \"actRepealNote\": \"Repealed by the Bharatiya Nyaya Sanhita, 2023, with effect from 1 July 2024\"\n        },\n        \"matchedBy\": \"alias\",\n        \"ambiguous\": false\n      }\n    ]\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  }\n}"
             }
           ]
         }

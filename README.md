@@ -1,6 +1,6 @@
 # CourtMesh API Postman Collection
 
-A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 40 production endpoints (plus the deep variant of `GET /health`), organised into twelve folders, with request bodies, saved example responses and per request documentation.
+A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 49 production endpoints (plus the deep variant of `GET /health`), organised into thirteen folders, with request bodies, saved example responses and per request documentation.
 
 Base URL: `https://research.courtmesh.ai/api/v1/prod`
 
@@ -16,6 +16,7 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | Judges | `GET /judges/search` |
 | CNR Lookup | `GET /cases/by-cnr/{cnr}`, `POST /search/cases` with `cnr` |
 | Monitoring | watchlists (`/watchlists`, `/watchlists/{id}`, `/watchlists/{id}/items`, `/watchlists/{id}/items/{cnr}`), the change feed (`GET /changes`, `GET /watchlists/{id}/events`), webhooks (`/webhooks`, `/webhooks/{id}`, `rotate-secret`, `test`, `deliveries`, delivery `retry`) |
+| Acts and Sections | `GET /acts/search`, `GET /acts/resolve`, `GET /acts/{slug}`, `GET /acts/{slug}/history`, `GET /acts/{slug}/sections`, `GET /acts/{slug}/sections/{sectionSlug}`, `GET /acts/{slug}/sections/{sectionSlug}/citing-cases`, `GET /sections/search`, `GET /sections/lookup` |
 | Timeline | `POST /request-timeline`, `GET /get-timeline/{requestId}` |
 | Litigation Check | `POST /party/screen`, `POST /party/screen/batch` |
 | Account | `GET /usage`, `GET /me`, `GET /audit` |
@@ -23,7 +24,7 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | Coverage | `GET /coverage` |
 | System | `GET /health`, `GET /health?deep=1` |
 
-100 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`), an unavailable entitlement lookup (503), and a batch party screen mixing successful and failed items.
+116 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`), an unavailable entitlement lookup (503), and a batch party screen mixing successful and failed items.
 
 ## Import and run it locally
 
@@ -34,7 +35,7 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 4. Send **Judges / Search judges**. It is the cheapest authenticated call, so it confirms your key works.
 5. Send **Search / Search cases (keyword)**, copy an `id` from the results into the `caseId` collection variable, then work through the Cases and Analysis folders.
 
-Collection variables you may want to set: `baseUrl`, `apiKey`, `caseId`, `requestId`, `userId`. Keep `apiKey` in an environment rather than in the collection so it never lands in source control.
+Collection variables you may want to set: `baseUrl`, `apiKey`, `caseId`, `requestId`, `userId`, and for the Acts and Sections folder `actSlug` and `sectionSlug`. Keep `apiKey` in an environment rather than in the collection so it never lands in source control.
 
 Auth is configured once at the collection level as a bearer token bound to `{{apiKey}}`, so every request inherits it. `GET /health`, `GET /health?deep=1`, `GET /reference/courts` and `GET /reference/case-types` override that with no auth. The API also accepts `X-API-Key: <key>` if you prefer that header.
 
@@ -69,7 +70,7 @@ Do this in the Postman web or desktop app while signed into the CourtMesh team w
    - Styling: set the brand colours and the CourtMesh logo.
    - Optional: enable **Run in Postman** button and the language snippets for cURL, Python requests, Node fetch, Go and PHP.
 6. **Click Publish Collection.** You get a public URL of the form `https://documenter.getpostman.com/view/<userId>/<collectionSlug>/<versionTag>`.
-7. **Verify the published page** in a private browsing window while signed out. Confirm no key is visible anywhere, that all ten folders appear, and that the saved examples render.
+7. **Verify the published page** in a private browsing window while signed out. Confirm no key is visible anywhere, that all thirteen folders appear, and that the saved examples render.
 8. **Submit the URL for indexing.** Add it to Google Search Console, link to it from the CourtMesh docs and website footer, and use it as the documentation link in every developer directory listing.
 
 To publish an update later: re import or edit the collection, then **View documentation**, then **Publish** again. The URL stays the same as long as you republish the same collection.
@@ -106,6 +107,7 @@ These come from the API's actual behaviour, not from an idealised spec.
 - **`POST /cases/{id}/analyze` needs `allowRemoteFetch: true`** before it will fetch a case's source document from a remote court host that is not already stored; without it, that case returns 403 `REMOTE_FETCH_NOT_ALLOWED`. A remote fetch adds a 20 credit surcharge on top of the base 100.
 - **`POST /request-timeline` defaults to a stored read** (1 credit, `meta.liveFetch: false`). Send `refresh: true` for a live court fetch instead (also 1 credit, `meta.liveFetch: true`, PAYG tier or above only, 403 `LIVE_FETCH_NOT_ALLOWED` on Free, 429 `LIVE_FETCH_LIMIT_REACHED` once the tier's daily cap is exhausted).
 - **Monitoring is free to set up and run.** Watchlist and webhook management, the daily check of every watched CNR and webhook delivery cost 0 credits; reading `GET /changes` or `GET /watchlists/{id}/events` costs 1 credit per non-empty page of up to 100 events (an empty page is free). `GET /cases/by-cnr/{cnr}` costs 1 credit when a record is returned. Webhook deliveries are signed: verify `CourtMesh-Signature` with the Node or Python SDK helper. A daily add allowance per account applies on top of the watched CNR cap (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000; items over it come back `cap_exceeded`). A case taken down at a party's request shows as an `unavailable` item and sends no events. If the court portal had nothing for a CNR in the last 24 hours it is not asked again: adds come back `not_found` and `GET /cases/by-cnr/{cnr}?fetch=true` answers 404 `CASE_NOT_FOUND`.
+- **Acts and Sections.** Nine `GET` requests, each 1 credit when something is returned and free otherwise, for API keys with the `legislation` scope. Slugs are lower case letters, digits and hyphens; get them from `GET /acts/resolve` or `GET /sections/lookup`. Every response carries repeal status, so check it before relying on a provision. `GET /acts/{slug}/history` is at act level and does not map old sections to new ones. The citing judgments list is not exhaustive and an empty list does not mean no judgment applied the provision. New error codes: `ACT_NOT_FOUND`, `SECTION_NOT_FOUND`.
 - **Path ids are flexible.** Every `{id}` accepts a 24 character hexadecimal case id or a case number. `POST /request-timeline` is the exception: its `case_id` must be a 24 character hexadecimal case id.
 - **Rate limit.** 10 requests per minute per API key by default (self serve tiers vary this per plan and per endpoint). 429 bodies carry `retryAfter` in seconds and `resetTime` as an ISO timestamp.
 - **`POST /party/screen` requires `purpose`.** It is the DPDP lawful basis recorded against the request, not an optional label. A match in the response is a case record bearing the screened name, not a verified identity, check `confidence` (`{ band, score, calibrated, engine }`, band one of `confirmed`/`probable`/`possible`/`unlikely`) and `evidence` (`signals` is an array of `{ name, status, weight, evidence }` objects) on each match. `data.summary.verdict` is `no_matches_found` only when `data.coverage.exhaustive` is true and nothing was withheld; sending `since` always forces `inconclusive`, and `matchCount` can read 0 while `verdict` still reads `matches_found` when `displayThreshold` hides everything found. The top level `notice` field carries the case removal policy text (there is no `coverage.note`). Costs 100 credits with matches, 20 credits with none, plus 80 credits when `adjudicate` is true AND at least one candidate was actually sent to the model (`adjudicationsRun > 0`); a 402 response carries `required`, `balance`, `shortfall`, `wallet`, `walletOwner` and either `topUpUrl` or `contactAdmin`. On the Free tier, `adjudicate: true` is a hard 403 `API_TIER_NOT_ALLOWED`, not a silent no-op.
