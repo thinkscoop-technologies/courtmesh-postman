@@ -1,6 +1,6 @@
 # CourtMesh API Postman Collection
 
-A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 40 production endpoints (plus the deep variant of `GET /health`), organised into twelve folders, with request bodies, saved example responses and per request documentation.
+A Postman Collection v2.1 for the CourtMesh Indian court cases API. All 44 production endpoints (plus the deep variant of `GET /health`), organised into thirteen folders, with request bodies, saved example responses and per request documentation.
 
 Base URL: `https://research.courtmesh.ai/api/v1/prod`
 
@@ -16,6 +16,7 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | Judges | `GET /judges/search` |
 | CNR Lookup | `GET /cases/by-cnr/{cnr}`, `POST /search/cases` with `cnr` |
 | Monitoring | watchlists (`/watchlists`, `/watchlists/{id}`, `/watchlists/{id}/items`, `/watchlists/{id}/items/{cnr}`), the change feed (`GET /changes`, `GET /watchlists/{id}/events`), webhooks (`/webhooks`, `/webhooks/{id}`, `rotate-secret`, `test`, `deliveries`, delivery `retry`) |
+| Cause lists | `GET /cause-lists/listings`, `GET /matters/{matterId}/cause-listings`, `GET /cause-lists/court`, `POST /cause-lists/check` |
 | Timeline | `POST /request-timeline`, `GET /get-timeline/{requestId}` |
 | Litigation Check | `POST /party/screen`, `POST /party/screen/batch` |
 | Account | `GET /usage`, `GET /me`, `GET /audit` |
@@ -23,7 +24,7 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | Coverage | `GET /coverage` |
 | System | `GET /health`, `GET /health?deep=1` |
 
-100 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`), an unavailable entitlement lookup (503), and a batch party screen mixing successful and failed items.
+122 saved example responses covering the success paths and the realistic failure paths: validation errors, 404s, rate limits, insufficient credits, tier gates (`API_TIER_NOT_ALLOWED`, `SEMANTIC_NOT_ALLOWED`, `LIVE_FETCH_NOT_ALLOWED`, `REMOTE_FETCH_NOT_ALLOWED`), a degraded upstream search (`PARTY_SCREEN_SEARCH_DEGRADED`), an unavailable entitlement lookup (503), and a batch party screen mixing successful and failed items.
 
 ## Import and run it locally
 
@@ -34,13 +35,13 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 4. Send **Judges / Search judges**. It is the cheapest authenticated call, so it confirms your key works.
 5. Send **Search / Search cases (keyword)**, copy an `id` from the results into the `caseId` collection variable, then work through the Cases and Analysis folders.
 
-Collection variables you may want to set: `baseUrl`, `apiKey`, `caseId`, `requestId`, `userId`. Keep `apiKey` in an environment rather than in the collection so it never lands in source control.
+Collection variables you may want to set: `baseUrl`, `apiKey`, `caseId`, `requestId`, `userId`, `matterId`, `courtKey`. Keep `apiKey` in an environment rather than in the collection so it never lands in source control.
 
 Auth is configured once at the collection level as a bearer token bound to `{{apiKey}}`, so every request inherits it. `GET /health`, `GET /health?deep=1`, `GET /reference/courts` and `GET /reference/case-types` override that with no auth. The API also accepts `X-API-Key: <key>` if you prefer that header.
 
 ### Idempotency-Key
 
-`POST /party/screen`, `POST /party/screen/batch`, `POST /cases/{id}/analyze`, `POST /cases/{id}/analyze-consolidated` and `POST /request-timeline` each carry an `Idempotency-Key` header defaulted to `{{$guid}}`, Postman's dynamic variable for a fresh UUID v4 on every send. A replayed request (same key, same body, within 24 hours) returns the original response again with no new charge (`Idempotency-Replayed: true` on the response); the same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. Because `{{$guid}}` regenerates every send, re-sending one of these requests from the Postman UI is always a fresh, separately charged call; paste a fixed value into the header to test the replay behaviour on purpose.
+`POST /party/screen`, `POST /party/screen/batch`, `POST /cases/{id}/analyze`, `POST /cases/{id}/analyze-consolidated` and `POST /request-timeline` each carry an `Idempotency-Key` header, as does `POST /cause-lists/check`, defaulted to `{{$guid}}`, Postman's dynamic variable for a fresh UUID v4 on every send. A replayed request (same key, same body, within 24 hours) returns the original response again with no new charge (`Idempotency-Replayed: true` on the response); the same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. Because `{{$guid}}` regenerates every send, re-sending one of these requests from the Postman UI is always a fresh, separately charged call; paste a fixed value into the header to test the replay behaviour on purpose.
 
 ## Run it from the command line
 
@@ -106,6 +107,7 @@ These come from the API's actual behaviour, not from an idealised spec.
 - **`POST /cases/{id}/analyze` needs `allowRemoteFetch: true`** before it will fetch a case's source document from a remote court host that is not already stored; without it, that case returns 403 `REMOTE_FETCH_NOT_ALLOWED`. A remote fetch adds a 20 credit surcharge on top of the base 100.
 - **`POST /request-timeline` defaults to a stored read** (1 credit, `meta.liveFetch: false`). Send `refresh: true` for a live court fetch instead (also 1 credit, `meta.liveFetch: true`, PAYG tier or above only, 403 `LIVE_FETCH_NOT_ALLOWED` on Free, 429 `LIVE_FETCH_LIMIT_REACHED` once the tier's daily cap is exhausted).
 - **Monitoring is free to set up and run.** Watchlist and webhook management, the daily check of every watched CNR and webhook delivery cost 0 credits; reading `GET /changes` or `GET /watchlists/{id}/events` costs 1 credit per non-empty page of up to 100 events (an empty page is free). `GET /cases/by-cnr/{cnr}` costs 1 credit when a record is returned. Webhook deliveries are signed: verify `CourtMesh-Signature` with the Node or Python SDK helper. A daily add allowance per account applies on top of the watched CNR cap (Free 50, Pay As You Go 5,000, Scale 50,000, Enterprise 500,000; items over it come back `cap_exceeded`). A case taken down at a party's request shows as an `unavailable` item and sends no events. If the court portal had nothing for a CNR in the last 24 hours it is not asked again: adds come back `not_found` and `GET /cases/by-cnr/{cnr}?fetch=true` answers 404 `CASE_NOT_FOUND`.
+- **Cause lists need the `causelist` API key scope** (keys without explicit scopes have full access) and an account with cause lists enabled (403 `CAUSE_LISTS_NOT_ENABLED` otherwise). `GET /cause-lists/listings` and `GET /matters/{matterId}/cause-listings` cost 1 credit per successful call; `GET /cause-lists/court` costs 1 credit only when `status` is `ok` or `partial` and 0 for the other statuses. `POST /cause-lists/check` takes 1 to 100 CNRs you watch and costs 1 credit per CNR with status `listed` or `no_entry_found`; `list_not_read`, `cannot_check` and `not_watched` are free. It never contacts a court. Only listings that were found are reported: `no_entry_found` and an empty result do not show that a case is absent from a list. A temporary outage is 502 `UPSTREAM_UNAVAILABLE` and is not charged. The one exception to "failed calls are not charged" is a 503 `SETTLEMENT_UNCONFIRMED` on the check: the answer was ready but the charge outcome is unknown and no results were returned, so check `GET /usage` before retrying (repeating the same call with the same `Idempotency-Key` is refused with 409 `IDEMPOTENCY_IN_PROGRESS` for up to 24 hours). A 503 `ENTITLEMENT_UNAVAILABLE` ran nothing and is safe to retry.
 - **Path ids are flexible.** Every `{id}` accepts a 24 character hexadecimal case id or a case number. `POST /request-timeline` is the exception: its `case_id` must be a 24 character hexadecimal case id.
 - **Rate limit.** 10 requests per minute per API key by default (self serve tiers vary this per plan and per endpoint). 429 bodies carry `retryAfter` in seconds and `resetTime` as an ISO timestamp.
 - **`POST /party/screen` requires `purpose`.** It is the DPDP lawful basis recorded against the request, not an optional label. A match in the response is a case record bearing the screened name, not a verified identity, check `confidence` (`{ band, score, calibrated, engine }`, band one of `confirmed`/`probable`/`possible`/`unlikely`) and `evidence` (`signals` is an array of `{ name, status, weight, evidence }` objects) on each match. `data.summary.verdict` is `no_matches_found` only when `data.coverage.exhaustive` is true and nothing was withheld; sending `since` always forces `inconclusive`, and `matchCount` can read 0 while `verdict` still reads `matches_found` when `displayThreshold` hides everything found. The top level `notice` field carries the case removal policy text (there is no `coverage.note`). Costs 100 credits with matches, 20 credits with none, plus 80 credits when `adjudicate` is true AND at least one candidate was actually sent to the model (`adjudicationsRun > 0`); a 402 response carries `required`, `balance`, `shortfall`, `wallet`, `walletOwner` and either `topUpUrl` or `contactAdmin`. On the Free tier, `adjudicate: true` is a hard 403 `API_TIER_NOT_ALLOWED`, not a silent no-op.

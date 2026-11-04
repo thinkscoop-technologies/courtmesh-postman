@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
     "name": "CourtMesh API: Indian Court Cases",
-    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as ZZAB010000012024, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n| matterId | A 24 character matter id, used by the cause listings of one matter |\n| courtKey | A court key from a cause listing, used by the court cause list |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). The cause list check (POST /cause-lists/check) honours it too. Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /cause-lists/listings | Cause lists |\n| GET | /matters/{matterId}/cause-listings | Cause lists |\n| GET | /cause-lists/court | Cause lists |\n| POST | /cause-lists/check | Cause lists |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "courtmesh",
     "version": "0.5.0"
@@ -106,6 +106,18 @@
       "value": "",
       "type": "string",
       "description": "The pagination.nextCursor from the previous List changes call."
+    },
+    {
+      "key": "matterId",
+      "value": "",
+      "type": "string",
+      "description": "The 24 character hexadecimal id of a matter in your account, for the cause listings of one matter."
+    },
+    {
+      "key": "courtKey",
+      "value": "DC:99:1:9900001:1:1",
+      "type": "string",
+      "description": "A court key from a listing, for example DC:99:1:9900001:1:1. SC, HC:<state>:<bench> or DC:<state>:<district>:<complex>:<establishment>:<court number>."
     }
   ],
   "item": [
@@ -3155,6 +3167,1366 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"code\": \"DELIVERY_NOT_FOUND\",\n  \"message\": \"Delivery not found.\",\n  \"error\": \"Delivery not found.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cause lists",
+      "description": "Hearing listings found on court cause lists for the matters in your account, the published list of a court where you have an open matter, and a check of CNRs you watch against stored lists. API keys with explicit scopes need `causelist`. The account must also have cause lists enabled (403 `CAUSE_LISTS_NOT_ENABLED` otherwise). Prices: listings and matter listings 1 credit per successful call; a court list 1 credit when it carries rows; the check 1 credit per CNR with status `listed` or `no_entry_found`. Failed calls are not charged, with one exception: a 503 `SETTLEMENT_UNCONFIRMED` on the check means the charge outcome is unknown (check your balance). Only listings that were found are reported: an empty result or a `no_entry_found` status does not show that a case is absent from a list. Dates are `YYYY-MM-DD` on the Indian calendar. A temporary outage is 502 `UPSTREAM_UNAVAILABLE`.",
+      "item": [
+        {
+          "name": "List cause listings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cause-lists/listings?from=2026-11-05&to=2026-11-12&page=1&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cause-lists",
+                "listings"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-05",
+                  "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-12",
+                  "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number, from 1."
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Page size, 1 to 100 and no more than your tier's maximum page size. Default: the lower of 50 and your tier's maximum."
+                }
+              ]
+            },
+            "description": "The listings found on court cause lists for the matters in your account, within a date range of at most 31 days (default: today and the next 7 days). Paginated with `page` and `limit` (the default `limit` is the lower of 50 and your tier's maximum page size); `pagination` is `{ page, limit, total, totalPages, hasMore }`. `limit` is capped by your tier's maximum page size and `page * limit` by its pagination depth; both are refused with 400 `PAGE_LIMIT_EXCEEDED` or `PAGINATION_DEPTH_EXCEEDED`.\n\n1 credit per successful call. A failed call is not charged. Needs the `causelist` API key scope and an account with cause lists enabled (403 `CAUSE_LISTS_NOT_ENABLED` otherwise). Only listings that were found are reported; an empty result is not a statement that a matter is absent from a list, so confirm against the court's own list when it matters."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"success envelope with a data array\", function () {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.success).to.eql(true);",
+                  "        pm.expect(json.data).to.be.an(\"array\");",
+                  "    });",
+                  "    pm.test(\"pagination has page, limit, total, totalPages and hasMore\", function () {",
+                  "        const p = pm.response.json().pagination;",
+                  "        pm.expect(p).to.be.an(\"object\");",
+                  "        pm.expect(p).to.have.all.keys(\"page\", \"limit\", \"total\", \"totalPages\", \"hasMore\");",
+                  "        pm.expect(p.page).to.be.a(\"number\");",
+                  "        pm.expect(p.hasMore).to.be.a(\"boolean\");",
+                  "    });",
+                  "    // Page 2 is the same request with page=2 while hasMore is true.",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 Page of listings",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/listings?from=2026-11-05&to=2026-11-12&page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-11-05",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number, from 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "Page size, 1 to 100 and no more than your tier's maximum page size. Default: the lower of 50 and your tier's maximum."
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6728a1f0c3d4e5f6a7b8c9d0\",\n      \"matterId\": \"66f1a2b3c4d5e6f7a8b9c0d1\",\n      \"matterTitle\": \"Alpha Finance Ltd v. Beta Traders\",\n      \"date\": \"2026-11-05\",\n      \"courtKey\": \"DC:99:1:9900001:1:1\",\n      \"court\": {\n        \"kind\": \"DC\",\n        \"name\": \"District Court, Example City\",\n        \"courtNo\": \"1\",\n        \"judges\": [\n          \"Sh. A. Example\"\n        ],\n        \"designation\": \"Additional District and Sessions Judge\"\n      },\n      \"item\": \"1\",\n      \"section\": \"Urgent Cases\",\n      \"purpose\": \"REPLY\",\n      \"listType\": \"civil\",\n      \"stage\": null,\n      \"caseText\": \"CMA/1/2024\",\n      \"matchedBy\": \"cnr\",\n      \"relation\": null,\n      \"fetchedAt\": \"2026-11-04T15:30:12.000Z\",\n      \"firstSeenAt\": \"2026-11-04T15:31:02.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 50,\n    \"total\": 1,\n    \"totalPages\": 1,\n    \"hasMore\": false\n  }\n}"
+            },
+            {
+              "name": "200 First of two pages",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/listings?from=2026-11-05&to=2026-11-12&page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-11-05",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number, from 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "Page size, 1 to 100 and no more than your tier's maximum page size. Default: the lower of 50 and your tier's maximum."
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6728a1f0c3d4e5f6a7b8c9d0\",\n      \"matterId\": \"66f1a2b3c4d5e6f7a8b9c0d1\",\n      \"matterTitle\": \"Alpha Finance Ltd v. Beta Traders\",\n      \"date\": \"2026-11-05\",\n      \"courtKey\": \"DC:99:1:9900001:1:1\",\n      \"court\": {\n        \"kind\": \"DC\",\n        \"name\": \"District Court, Example City\",\n        \"courtNo\": \"1\",\n        \"judges\": [\n          \"Sh. A. Example\"\n        ],\n        \"designation\": \"Additional District and Sessions Judge\"\n      },\n      \"item\": \"1\",\n      \"section\": \"Urgent Cases\",\n      \"purpose\": \"REPLY\",\n      \"listType\": \"civil\",\n      \"stage\": null,\n      \"caseText\": \"CMA/1/2024\",\n      \"matchedBy\": \"cnr\",\n      \"relation\": null,\n      \"fetchedAt\": \"2026-11-04T15:30:12.000Z\",\n      \"firstSeenAt\": \"2026-11-04T15:31:02.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 1,\n    \"total\": 2,\n    \"totalPages\": 2,\n    \"hasMore\": true\n  }\n}"
+            },
+            {
+              "name": "400 Range too wide",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/listings?from=2026-10-01&to=2026-11-12&page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-10-01",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number, from 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "Page size, 1 to 100 and no more than your tier's maximum page size. Default: the lower of 50 and your tier's maximum."
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\",\n  \"details\": [\n    \"from and to can be at most 31 days apart.\"\n  ]\n}"
+            },
+            {
+              "name": "400 Page size above the tier maximum",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/listings?from=2026-11-05&to=2026-11-12&page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-11-05",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number, from 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "Page size, 1 to 100 and no more than your tier's maximum page size. Default: the lower of 50 and your tier's maximum."
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"PAGE_LIMIT_EXCEEDED\",\n  \"message\": \"limit exceeds the maximum page size (20) for the free tier\",\n  \"error\": \"limit exceeds the maximum page size (20) for the free tier\",\n  \"limit\": 50,\n  \"tier\": \"free\"\n}"
+            },
+            {
+              "name": "403 Cause lists not enabled",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/listings?from=2026-11-05&to=2026-11-12&page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-11-05",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number, from 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "Page size, 1 to 100 and no more than your tier's maximum page size. Default: the lower of 50 and your tier's maximum."
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"CAUSE_LISTS_NOT_ENABLED\",\n  \"message\": \"This account does not have access to cause lists.\",\n  \"error\": \"This account does not have access to cause lists.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\"\n}"
+            },
+            {
+              "name": "502 Temporarily unavailable",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/listings?from=2026-11-05&to=2026-11-12&page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-11-05",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number, from 1."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "Page size, 1 to 100 and no more than your tier's maximum page size. Default: the lower of 50 and your tier's maximum."
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"UPSTREAM_UNAVAILABLE\",\n  \"message\": \"Cause lists are temporarily unavailable. Please retry shortly. You have not been charged.\",\n  \"error\": \"Cause lists are temporarily unavailable. Please retry shortly. You have not been charged.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List cause listings for a matter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/matters/{{matterId}}/cause-listings?from=2026-11-05&to=2026-11-12",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matters",
+                "{{matterId}}",
+                "cause-listings"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-05",
+                  "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-12",
+                  "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                }
+              ]
+            },
+            "description": "The listings found for one matter in your account, within a date range of at most 31 days (default: today and the next 7 days). `matterId` is the 24 character hexadecimal id of the matter, set it in the `matterId` collection variable. Returns `{ matter: { id, title, courtKey }, listings }`.\n\n1 credit per successful call. An unknown matter (404 `MATTER_NOT_FOUND`), an account without cause list access or a temporary outage is not charged. Needs the `causelist` API key scope and an account with cause lists enabled (403 `CAUSE_LISTS_NOT_ENABLED` otherwise). Only listings that were found are reported; an empty result is not a statement that a matter is absent from a list, so confirm against the court's own list when it matters."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"matter and listings are returned\", function () {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.success).to.eql(true);",
+                  "        pm.expect(json.data.matter).to.have.property(\"id\");",
+                  "        pm.expect(json.data.listings).to.be.an(\"array\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 Matter and its listings",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/matters/{{matterId}}/cause-listings?from=2026-11-05&to=2026-11-12",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "matters",
+                    "{{matterId}}",
+                    "cause-listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-11-05",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"matter\": {\n      \"id\": \"66f1a2b3c4d5e6f7a8b9c0d1\",\n      \"title\": \"Alpha Finance Ltd v. Beta Traders\",\n      \"courtKey\": \"DC:99:1:9900001:1:1\"\n    },\n    \"listings\": [\n      {\n        \"id\": \"6728a1f0c3d4e5f6a7b8c9d0\",\n        \"matterId\": \"66f1a2b3c4d5e6f7a8b9c0d1\",\n        \"matterTitle\": \"Alpha Finance Ltd v. Beta Traders\",\n        \"date\": \"2026-11-05\",\n        \"courtKey\": \"DC:99:1:9900001:1:1\",\n        \"court\": {\n          \"kind\": \"DC\",\n          \"name\": \"District Court, Example City\",\n          \"courtNo\": \"1\",\n          \"judges\": [\n            \"Sh. A. Example\"\n          ],\n          \"designation\": \"Additional District and Sessions Judge\"\n        },\n        \"item\": \"1\",\n        \"section\": \"Urgent Cases\",\n        \"purpose\": \"REPLY\",\n        \"listType\": \"civil\",\n        \"stage\": null,\n        \"caseText\": \"CMA/1/2024\",\n        \"matchedBy\": \"cnr\",\n        \"relation\": null,\n        \"fetchedAt\": \"2026-11-04T15:30:12.000Z\",\n        \"firstSeenAt\": \"2026-11-04T15:31:02.000Z\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  }\n}"
+            },
+            {
+              "name": "400 Malformed matter id",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/matters/not-an-id/cause-listings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "matters",
+                    "not-an-id",
+                    "cause-listings"
+                  ],
+                  "query": []
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\",\n  \"details\": [\n    \"matterId: matterId must be a 24 character hexadecimal id.\"\n  ]\n}"
+            },
+            {
+              "name": "404 Unknown matter",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/matters/{{matterId}}/cause-listings?from=2026-11-05&to=2026-11-12",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "matters",
+                    "{{matterId}}",
+                    "cause-listings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-11-05",
+                      "description": "First date, YYYY-MM-DD. Send together with `to`; omit both for today and the next 7 days."
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-12",
+                      "description": "Last date, YYYY-MM-DD. At most 31 days after `from`."
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"MATTER_NOT_FOUND\",\n  \"message\": \"Matter not found.\",\n  \"error\": \"Matter not found.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get a court's cause list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cause-lists/court?courtKey={{courtKey}}&date=2026-11-05",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cause-lists",
+                "court"
+              ],
+              "query": [
+                {
+                  "key": "courtKey",
+                  "value": "{{courtKey}}",
+                  "description": "`SC`, `HC:<state>:<bench>` or `DC:<state>:<district>:<complex>:<establishment>:<court number>`, digits only. Use the `courtKey` of a listing."
+                },
+                {
+                  "key": "date",
+                  "value": "2026-11-05",
+                  "description": "Date of the list, YYYY-MM-DD."
+                }
+              ]
+            },
+            "description": "The published list of one court for one date, for a court where you have an open matter. `data.status` is `ok`, `partial`, `empty`, `not_published`, `unavailable`, `invalid_court` or `none`. `ok` and `partial` carry rows (`partial` means some parts of the list could not be read; `complete` says whether every part was). The others carry no rows.\n\n1 credit only when `status` is `ok` or `partial`. Every other status is a 200 that costs 0 (`meta.creditsCharged` says so), though the call needs at least 1 credit available when it starts. A court where you have no open matter is 404 `COURT_LIST_NOT_FOUND`, not charged. A restricted row carries no party names or advocates. Needs the `causelist` API key scope and an account with cause lists enabled (403 `CAUSE_LISTS_NOT_ENABLED` otherwise). A status of `empty` or `unavailable`, or a row you do not see, is not a statement that a case is absent from the list."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"court list has a known status and a rows array\", function () {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.success).to.eql(true);",
+                  "        pm.expect(json.data.status).to.be.oneOf([\"ok\", \"partial\", \"empty\", \"not_published\", \"unavailable\", \"invalid_court\", \"none\"]);",
+                  "        pm.expect(json.data.rows).to.be.an(\"array\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 List with rows",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/court?courtKey={{courtKey}}&date=2026-11-05",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "court"
+                  ],
+                  "query": [
+                    {
+                      "key": "courtKey",
+                      "value": "{{courtKey}}",
+                      "description": "`SC`, `HC:<state>:<bench>` or `DC:<state>:<district>:<complex>:<establishment>:<court number>`, digits only. Use the `courtKey` of a listing."
+                    },
+                    {
+                      "key": "date",
+                      "value": "2026-11-05",
+                      "description": "Date of the list, YYYY-MM-DD."
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"courtKey\": \"DC:99:1:9900001:1:1\",\n    \"date\": \"2026-11-05\",\n    \"status\": \"ok\",\n    \"complete\": true,\n    \"fetchedAt\": \"2026-11-04T15:30:12.000Z\",\n    \"court\": {\n      \"kind\": \"DC\",\n      \"name\": \"District Court, Example City\",\n      \"courtNo\": \"1\",\n      \"judges\": [\n        \"Sh. A. Example\"\n      ],\n      \"designation\": \"Additional District and Sessions Judge\"\n    },\n    \"rows\": [\n      {\n        \"item\": \"2\",\n        \"itemRaw\": \"2\",\n        \"section\": \"Urgent Cases\",\n        \"purpose\": \"Arguments\",\n        \"listType\": \"civil\",\n        \"courtNo\": \"1\",\n        \"courtName\": \"District Court, Example City\",\n        \"judges\": [\n          \"Sh. A. Example\"\n        ],\n        \"caseText\": \"CMA/1/2024\",\n        \"caseType\": \"CMA\",\n        \"caseNumber\": \"1\",\n        \"caseYear\": \"2024\",\n        \"key\": \"CMA|1|2024\",\n        \"cnr\": \"ZZAB010000012024\",\n        \"diaryNumber\": null,\n        \"diaryYear\": null,\n        \"petitioner\": \"Alpha Finance Ltd\",\n        \"respondent\": \"Beta Traders\",\n        \"advocates\": \"A. Advocate; B. Advocate\",\n        \"stage\": null,\n        \"related\": [\n          {\n            \"relation\": \"application\",\n            \"caseType\": \"CMAPPL\",\n            \"caseNumber\": \"2\",\n            \"caseYear\": \"2024\",\n            \"key\": \"CMAPPL|2|2024\"\n          }\n        ],\n        \"restricted\": false\n      }\n    ]\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  }\n}"
+            },
+            {
+              "name": "200 No list available, free",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/court?courtKey={{courtKey}}&date=2026-11-05",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "court"
+                  ],
+                  "query": [
+                    {
+                      "key": "courtKey",
+                      "value": "{{courtKey}}",
+                      "description": "`SC`, `HC:<state>:<bench>` or `DC:<state>:<district>:<complex>:<establishment>:<court number>`, digits only. Use the `courtKey` of a listing."
+                    },
+                    {
+                      "key": "date",
+                      "value": "2026-11-05",
+                      "description": "Date of the list, YYYY-MM-DD."
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"courtKey\": \"DC:99:1:9900001:1:1\",\n    \"date\": \"2026-11-05\",\n    \"status\": \"unavailable\",\n    \"complete\": false,\n    \"fetchedAt\": null,\n    \"court\": null,\n    \"rows\": []\n  },\n  \"meta\": {\n    \"creditsCharged\": 0,\n    \"metered\": true\n  }\n}"
+            },
+            {
+              "name": "400 Invalid court key",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/court?courtKey=DC:99:1&date=2026-11-05",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "court"
+                  ],
+                  "query": [
+                    {
+                      "key": "courtKey",
+                      "value": "DC:99:1",
+                      "description": "`SC`, `HC:<state>:<bench>` or `DC:<state>:<district>:<complex>:<establishment>:<court number>`, digits only. Use the `courtKey` of a listing."
+                    },
+                    {
+                      "key": "date",
+                      "value": "2026-11-05",
+                      "description": "Date of the list, YYYY-MM-DD."
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\",\n  \"details\": [\n    \"courtKey: courtKey is not a valid court key. Use SC, HC:<state>:<bench> or DC:<state>:<district>:<complex>:<establishment>:<court number>.\"\n  ]\n}"
+            },
+            {
+              "name": "404 No open matter on that court",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/court?courtKey={{courtKey}}&date=2026-11-05",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "court"
+                  ],
+                  "query": [
+                    {
+                      "key": "courtKey",
+                      "value": "{{courtKey}}",
+                      "description": "`SC`, `HC:<state>:<bench>` or `DC:<state>:<district>:<complex>:<establishment>:<court number>`, digits only. Use the `courtKey` of a listing."
+                    },
+                    {
+                      "key": "date",
+                      "value": "2026-11-05",
+                      "description": "Date of the list, YYYY-MM-DD."
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"COURT_LIST_NOT_FOUND\",\n  \"message\": \"No cause list is available for that court on your account.\",\n  \"error\": \"No cause list is available for that court on your account.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Check watched CNRs on cause lists",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cause-lists/check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cause-lists",
+                "check"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-05\",\n  \"to\": \"2026-11-06\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Checks whether 1 to 100 CNRs that your account watches appear on a cause list that CourtMesh already holds. Body: `{ cnrs (1..100), from?, to? }`. Send both dates or neither (default: today and tomorrow, Indian calendar); at most 7 days apart. CNRs are normalised and de-duplicated in order; an invalid CNR is a 400 naming it. The call never contacts a court.\n\nEach result has `status`:\n\n- `listed`: a row of this case was found. `listings` holds the rows. 1 credit.\n- `no_entry_found`: a list was read and no row was recognised. This is not proof that the case is not listed; `dates[].complete` says how much of each list was read. 1 credit.\n- `list_not_read`: no list was held for the dates. For a District Court it can also mean the list of the case's own courtroom could not be confirmed (`dates[].status` is then `none`). Free.\n- `cannot_check`: `reason` says why: `pending`, `record_unavailable`, `court_not_supported`, or a court identification reason (`no_case_identity`, `no_court_key`, `no_court_number`, `invalid_court_key`, `unsupported_court`). `courtKey` can be null. Free.\n- `not_watched`: your account does not watch this CNR. Free.\n\n`listings[].matchedBy` is `cnr`, `diary`, `key` or `related_key`; `listings[].courtKey` and `caseText` can be null (`caseText` is null on a `related_key` match or a restricted row). At most 100 CNRs, and the number of distinct CNRs (repeats are ignored) times the number of dates in the range (inclusive; 2 by default) at most 300, otherwise 400 `VALIDATION_ERROR`. `summary` counts each status. `data.from` and `data.to` are the dates that were looked at, including when you sent none. 1 credit per CNR with status `listed` or `no_entry_found`; everything else costs 0, settled once for the whole call. The call also needs at least 1 credit available when it starts: it is refused with 402 `INSUFFICIENT_API_CREDITS` when your balance is below the number of watched CNRs in it. A 402 can also arrive after the answer is ready, when the credits due cannot be settled; no results are returned then. A 503 with `code` `SETTLEMENT_UNCONFIRMED` means the answer was ready but the charge outcome is unknown and no results were returned: do not retry yet, check your balance (`GET /usage`) first. Repeating the call with the same `Idempotency-Key` is refused with 409 `IDEMPOTENCY_IN_PROGRESS` for up to 24 hours. A 503 `ENTITLEMENT_UNAVAILABLE` ran nothing and is safe to retry. A temporary outage is 502 `UPSTREAM_UNAVAILABLE` for the whole call and is not charged. `Idempotency-Key` is honoured on this request. Needs the `causelist` API key scope and an account with cause lists enabled (403 `CAUSE_LISTS_NOT_ENABLED` otherwise). Only positive listings are reported."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"every result has a known status and a listings array\", function () {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.success).to.eql(true);",
+                  "        pm.expect(json.data.results).to.be.an(\"array\");",
+                  "        json.data.results.forEach(function (r) {",
+                  "            pm.expect(r.status).to.be.oneOf([\"listed\", \"no_entry_found\", \"list_not_read\", \"cannot_check\", \"not_watched\"]);",
+                  "            pm.expect(r.listings).to.be.an(\"array\");",
+                  "        });",
+                  "    });",
+                  "    pm.test(\"summary counts every status\", function () {",
+                  "        pm.expect(pm.response.json().data.summary).to.have.all.keys(\"listed\", \"noEntryFound\", \"listNotRead\", \"cannotCheck\", \"notWatched\");",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 Mixed statuses",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-05\",\n  \"to\": \"2026-11-06\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"cnr\": \"ZZAB010000012024\",\n        \"status\": \"listed\",\n        \"reason\": null,\n        \"courtKey\": \"DC:99:1:9900001:1:1\",\n        \"dates\": [\n          {\n            \"date\": \"2026-11-05\",\n            \"status\": \"ok\",\n            \"complete\": true,\n            \"fetchedAt\": \"2026-11-04T15:30:12.000Z\"\n          },\n          {\n            \"date\": \"2026-11-06\",\n            \"status\": \"none\",\n            \"complete\": false,\n            \"fetchedAt\": null\n          }\n        ],\n        \"listings\": [\n          {\n            \"date\": \"2026-11-05\",\n            \"courtKey\": \"DC:99:1:9900001:1:1\",\n            \"court\": {\n              \"kind\": \"DC\",\n              \"name\": \"District Court, Example City\",\n              \"courtNo\": \"1\",\n              \"judges\": [\n                \"Sh. A. Example\"\n              ],\n              \"designation\": \"Additional District and Sessions Judge\"\n            },\n            \"item\": \"1\",\n            \"section\": \"Urgent Cases\",\n            \"purpose\": \"REPLY\",\n            \"listType\": \"civil\",\n            \"stage\": null,\n            \"caseText\": \"CMA/1/2024\",\n            \"matchedBy\": \"cnr\",\n            \"relation\": null,\n            \"fetchedAt\": \"2026-11-04T15:30:12.000Z\"\n          }\n        ]\n      },\n      {\n        \"cnr\": \"ZZAB010000022024\",\n        \"status\": \"no_entry_found\",\n        \"reason\": null,\n        \"courtKey\": \"HC:99:1\",\n        \"dates\": [\n          {\n            \"date\": \"2026-11-05\",\n            \"status\": \"partial\",\n            \"complete\": false,\n            \"fetchedAt\": \"2026-11-04T15:12:40.000Z\"\n          }\n        ],\n        \"listings\": []\n      },\n      {\n        \"cnr\": \"ZZAB010000032024\",\n        \"status\": \"not_watched\",\n        \"reason\": null,\n        \"courtKey\": null,\n        \"dates\": [],\n        \"listings\": []\n      },\n      {\n        \"cnr\": \"ZZAB010000042024\",\n        \"status\": \"list_not_read\",\n        \"reason\": null,\n        \"courtKey\": \"DC:99:1:9900001:1:1\",\n        \"dates\": [\n          {\n            \"date\": \"2026-11-05\",\n            \"status\": \"none\",\n            \"complete\": false,\n            \"fetchedAt\": null\n          },\n          {\n            \"date\": \"2026-11-06\",\n            \"status\": \"none\",\n            \"complete\": false,\n            \"fetchedAt\": null\n          }\n        ],\n        \"listings\": []\n      },\n      {\n        \"cnr\": \"ZZAB010000052024\",\n        \"status\": \"cannot_check\",\n        \"reason\": \"pending\",\n        \"courtKey\": null,\n        \"dates\": [],\n        \"listings\": []\n      }\n    ],\n    \"summary\": {\n      \"listed\": 1,\n      \"noEntryFound\": 1,\n      \"listNotRead\": 1,\n      \"cannotCheck\": 1,\n      \"notWatched\": 1\n    },\n    \"from\": \"2026-11-05\",\n    \"to\": \"2026-11-06\"\n  },\n  \"meta\": {\n    \"creditsCharged\": 2,\n    \"metered\": true\n  }\n}"
+            },
+            {
+              "name": "400 Range over 7 days",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-01\",\n  \"to\": \"2026-11-09\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\",\n  \"details\": [\n    \"from and to can be at most 7 days apart.\"\n  ]\n}"
+            },
+            {
+              "name": "402 Insufficient credits before the call runs",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-05\",\n  \"to\": \"2026-11-06\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Payment Required",
+              "code": 402,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Insufficient API credits\",\n  \"code\": \"INSUFFICIENT_API_CREDITS\",\n  \"message\": \"Insufficient API credits. This call costs up to 4 credits (4 x 1) and the balance is 1.\",\n  \"required\": 4,\n  \"balance\": 1,\n  \"shortfall\": 3,\n  \"wallet\": \"api_credits\",\n  \"walletOwner\": \"user\",\n  \"topUpUrl\": \"https://research.courtmesh.ai/api/settings/api-keys#credits\"\n}"
+            },
+            {
+              "name": "402 Credits due could not be settled, no results returned",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-05\",\n  \"to\": \"2026-11-06\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Payment Required",
+              "code": 402,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Insufficient API credits\",\n  \"code\": \"INSUFFICIENT_API_CREDITS\",\n  \"message\": \"Insufficient API credits. This call costs 2 credits and the balance is 0.\",\n  \"required\": 2,\n  \"balance\": 0,\n  \"shortfall\": 2,\n  \"wallet\": \"api_credits\",\n  \"walletOwner\": \"user\",\n  \"topUpUrl\": \"https://research.courtmesh.ai/api/settings/api-keys#credits\"\n}"
+            },
+            {
+              "name": "503 Entitlement could not be verified, safe to retry",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-05\",\n  \"to\": \"2026-11-06\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"error\": \"Unable to verify API entitlement. Please retry.\",\n  \"code\": \"ENTITLEMENT_UNAVAILABLE\"\n}"
+            },
+            {
+              "name": "503 Charge could not be confirmed, no results returned",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-05\",\n  \"to\": \"2026-11-06\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"SETTLEMENT_UNCONFIRMED\",\n  \"message\": \"We could not confirm the credit charge for this call, so no results were returned. Please check your usage before retrying.\",\n  \"error\": \"We could not confirm the credit charge for this call, so no results were returned. Please check your usage before retrying.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\"\n}"
+            },
+            {
+              "name": "400 Invalid CNR",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ABC\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\",\n  \"details\": [\n    \"cnrs.1: \\\"ABC\\\" is not a valid CNR. A CNR has 16 characters, for example ZZAB010000022024.\"\n  ]\n}"
+            },
+            {
+              "name": "400 Too many CNRs for the range",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"cnrs\": [\"ZZAB010000012024\", \"ZZAB010000022024\", \"ZZAB010000032024\", \"ZZAB010000042024\", \"ZZAB010000052024\", \"ZZAB010000062024\", \"ZZAB010000072024\", \"ZZAB010000082024\", \"ZZAB010000092024\", \"ZZAB010000102024\", \"ZZAB010000112024\", \"ZZAB010000122024\", \"ZZAB010000132024\", \"ZZAB010000142024\", \"ZZAB010000152024\", \"ZZAB010000162024\", \"ZZAB010000172024\", \"ZZAB010000182024\", \"ZZAB010000192024\", \"ZZAB010000202024\", \"ZZAB010000212024\", \"ZZAB010000222024\", \"ZZAB010000232024\", \"ZZAB010000242024\", \"ZZAB010000252024\", \"ZZAB010000262024\", \"ZZAB010000272024\", \"ZZAB010000282024\", \"ZZAB010000292024\", \"ZZAB010000302024\", \"ZZAB010000312024\", \"ZZAB010000322024\", \"ZZAB010000332024\", \"ZZAB010000342024\", \"ZZAB010000352024\", \"ZZAB010000362024\", \"ZZAB010000372024\", \"ZZAB010000382024\"], \"from\": \"2026-11-01\", \"to\": \"2026-11-08\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed. Please check your request and try again.\",\n  \"error\": \"Validation failed. Please check your request and try again.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\",\n  \"details\": [\n    \"A call can cover at most 300 CNR and date pairs. This one asks for 38 CNRs over 8 dates; send fewer CNRs or a shorter date range.\"\n  ]\n}"
+            },
+            {
+              "name": "502 Temporarily unavailable",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}",
+                    "description": "Optional, 1 to 128 characters, [A-Za-z0-9_.-]. Scoped per API key for 24 hours: a replayed request with the same key and the same body returns the stored 2xx response again (response header Idempotency-Replayed: true, no new charge). Postman's {{$guid}} generates a fresh UUID v4 per send; paste a fixed value to test the replay behaviour deliberately."
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/cause-lists/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "cause-lists",
+                    "check"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cnrs\": [\n    \"ZZAB010000012024\",\n    \"ZZAB010000022024\",\n    \"ZZAB010000032024\",\n    \"ZZAB010000042024\",\n    \"ZZAB010000052024\"\n  ],\n  \"from\": \"2026-11-05\",\n  \"to\": \"2026-11-06\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Gateway",
+              "code": 502,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"code\": \"UPSTREAM_UNAVAILABLE\",\n  \"message\": \"Cause lists are temporarily unavailable. Please retry shortly. You have not been charged.\",\n  \"error\": \"Cause lists are temporarily unavailable. Please retry shortly. You have not been charged.\",\n  \"requestId\": \"4c9f6e2a-2b3d-4e9a-9c1a-8e2f6a1b7c3d\"\n}"
             }
           ]
         }
