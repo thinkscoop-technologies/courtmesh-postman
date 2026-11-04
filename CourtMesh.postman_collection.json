@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
     "name": "CourtMesh API: Indian Court Cases",
-    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n| actSlug | An act slug such as indian-penal-code-1860, used by the Acts and Sections requests |\n| sectionSlug | A provision slug such as section-302, used by the Acts and Sections requests |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints sit on different engines.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /acts/search | Acts and Sections |\n| GET | /acts/resolve | Acts and Sections |\n| GET | /acts/{slug} | Acts and Sections |\n| GET | /acts/{slug}/history | Acts and Sections |\n| GET | /acts/{slug}/sections | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug} | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug}/citing-cases | Acts and Sections |\n| GET | /sections/search | Acts and Sections |\n| GET | /sections/lookup | Acts and Sections |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as DLHC010084212021, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n| actSlug | An act slug such as indian-penal-code-1860, used by the Acts and Sections requests |\n| sectionSlug | A provision slug such as section-302, used by the Acts and Sections requests |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints page differently.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /acts/search | Acts and Sections |\n| GET | /acts/resolve | Acts and Sections |\n| GET | /acts/{slug} | Acts and Sections |\n| GET | /acts/{slug}/history | Acts and Sections |\n| GET | /acts/{slug}/sections | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug} | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug}/citing-cases | Acts and Sections |\n| GET | /sections/search | Acts and Sections |\n| GET | /sections/lookup | Acts and Sections |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "courtmesh",
     "version": "0.6.0"
@@ -3174,7 +3174,7 @@
     },
     {
       "name": "Acts and Sections",
-      "description": "Indian statutes: find an act, read a provision with its amendment notes, follow what replaced a repealed law, and list judgments citing a provision. Text is the statute as published, with no commentary. Each request costs 1 credit when it returns something and nothing otherwise. Repeal status is on every response, so check it before relying on a provision. Use `GET /acts/resolve` or `GET /sections/lookup` to get the slugs the other requests need. The citing judgments list is not exhaustive and an empty list does not mean no judgment applied the provision. Act history is at act level and does not map old sections to new ones. New error codes: `ACT_NOT_FOUND`, `SECTION_NOT_FOUND`. API keys with explicit scopes need the `legislation` scope.",
+      "description": "Indian statutes: find an act, read a provision with its amendment notes, follow what replaced a repealed law, and list judgments citing a provision. Text is the statute as published, with no commentary. Each request costs 1 credit when it returns something and nothing otherwise. Repeal status is on every response, so check it before relying on a provision. Use `GET /acts/resolve` or `GET /sections/lookup` to get the slugs the other requests need. The citing judgments list is not exhaustive, some matters are never listed, and an empty list does not mean no judgment applied the provision. Act history is at act level and does not map old sections to new ones. New error codes: `ACT_NOT_FOUND`, `SECTION_NOT_FOUND`. API keys with explicit scopes need the `legislation` scope.",
       "item": [
         {
           "name": "Search acts",
@@ -3237,7 +3237,7 @@
                 }
               ]
             },
-            "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope."
+            "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope. This request has a lower per minute limit than other calls and is refused with 429 above it."
           },
           "response": [
             {
@@ -3301,7 +3301,7 @@
                     }
                   ]
                 },
-                "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope."
+                "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope. This request has a lower per minute limit than other calls and is refused with 429 above it."
               },
               "status": "OK",
               "code": 200,
@@ -3376,7 +3376,7 @@
                     }
                   ]
                 },
-                "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope."
+                "description": "Finds acts by title, short form or subject. Costs 1 credit when it returns something; an empty result costs nothing. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. `meta.weakMatch` true means nothing matched the words closely, so treat the rows as a guess. Every row carries `repealed` and `repealNote`; check them before relying on an act. Needs the `legislation` scope. This request has a lower per minute limit than other calls and is refused with 429 above it."
               },
               "status": "Bad Request",
               "code": 400,
@@ -3419,7 +3419,7 @@
                 }
               ]
             },
-            "description": "Turns what a lawyer writes (IPC, NI Act, Cr.P.C.) into the act, returning up to five candidates, best first. Costs 1 credit when it returns something; an empty result costs nothing. `matchedBy` is `short_form` for an exact match on a known short form, or `text`. Use the returned `slug` in the requests that follow."
+            "description": "Turns what a lawyer writes (IPC, NI Act, Cr.P.C.) into the act, returning up to five candidates, best first. Costs 1 credit when it returns something; an empty result costs nothing. `matchedBy` is `short_form` for an exact match on a known short form, or `text`. Use the returned `slug` in the requests that follow. This request has a lower per minute limit than other calls and is refused with 429 above it."
           },
           "response": [
             {
@@ -3449,7 +3449,7 @@
                     }
                   ]
                 },
-                "description": "Turns what a lawyer writes (IPC, NI Act, Cr.P.C.) into the act, returning up to five candidates, best first. Costs 1 credit when it returns something; an empty result costs nothing. `matchedBy` is `short_form` for an exact match on a known short form, or `text`. Use the returned `slug` in the requests that follow."
+                "description": "Turns what a lawyer writes (IPC, NI Act, Cr.P.C.) into the act, returning up to five candidates, best first. Costs 1 credit when it returns something; an empty result costs nothing. `matchedBy` is `short_form` for an exact match on a known short form, or `text`. Use the returned `slug` in the requests that follow. This request has a lower per minute limit than other calls and is refused with 429 above it."
               },
               "status": "OK",
               "code": 200,
@@ -3921,7 +3921,7 @@
                 }
               ]
             },
-            "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+            "description": "Judgments citing exactly this provision, newest first. A list for section 302 of the Penal Code does not include judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. Some matters are never listed. `listAvailable` is false for a provision we do not list judgments for, including sexual offences and cruelty provisions; that says nothing about whether any exist. A page can hold fewer rows than `limit`, or none, while `pagination.hasMore` is true, so keep following `pagination.nextCursor` until `hasMore` is false. Costs 1 credit when it returns something. Nothing returned costs nothing. A failed check returns 502 `UPSTREAM_UNAVAILABLE`, not charged, safe to retry once. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
           },
           "response": [
             {
@@ -3960,7 +3960,7 @@
                     }
                   ]
                 },
-                "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+                "description": "Judgments citing exactly this provision, newest first. A list for section 302 of the Penal Code does not include judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. Some matters are never listed. `listAvailable` is false for a provision we do not list judgments for, including sexual offences and cruelty provisions; that says nothing about whether any exist. A page can hold fewer rows than `limit`, or none, while `pagination.hasMore` is true, so keep following `pagination.nextCursor` until `hasMore` is false. Costs 1 credit when it returns something. Nothing returned costs nothing. A failed check returns 502 `UPSTREAM_UNAVAILABLE`, not charged, safe to retry once. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
               },
               "status": "OK",
               "code": 200,
@@ -3972,7 +3972,57 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"section\": {\n      \"actSlug\": \"indian-penal-code-1860\",\n      \"slug\": \"section-302\",\n      \"number\": \"302\"\n    },\n    \"listAvailable\": true,\n    \"note\": \"Not an exhaustive list of every judgment applying this provision. An empty list does not mean no judgment applied it.\",\n    \"total\": 1,\n    \"totalIsLowerBound\": false,\n    \"cases\": [\n      {\n        \"id\": \"65f0c0ffee0000000000abcd\",\n        \"title\": \"State v. Example\",\n        \"court\": \"Delhi High Court\",\n        \"courtType\": \"High Court\",\n        \"cnr\": \"DLHC010084212021\",\n        \"caseNumber\": \"CRL.A. 12/2021\",\n        \"decisionDate\": \"2024-05-06\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"limit\": 20,\n    \"hasMore\": false,\n    \"nextCursor\": null\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"section\": {\n      \"actSlug\": \"indian-penal-code-1860\",\n      \"slug\": \"section-302\",\n      \"number\": \"302\"\n    },\n    \"listAvailable\": true,\n    \"note\": \"Not an exhaustive list of every judgment applying this provision. An empty list does not mean no judgment applied it.\",\n    \"cases\": [\n      {\n        \"id\": \"65f0c0ffee0000000000abcd\",\n        \"title\": \"State v. Example\",\n        \"court\": \"Delhi High Court\",\n        \"courtType\": \"High Court\",\n        \"cnr\": \"DLHC010084212021\",\n        \"caseNumber\": \"CRL.A. 12/2021\",\n        \"decisionDate\": \"2024-05-06\"\n      }\n    ]\n  },\n  \"meta\": {\n    \"creditsCharged\": 1,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"limit\": 20,\n    \"hasMore\": false,\n    \"nextCursor\": null\n  }\n}"
+            },
+            {
+              "name": "200 Empty page, more pages remain (follow the cursor)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/acts/{{actSlug}}/sections/{{sectionSlug}}/citing-cases?limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "acts",
+                    "{{actSlug}}",
+                    "sections",
+                    "{{sectionSlug}}",
+                    "citing-cases"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "Opaque cursor from `pagination.nextCursor`. Valid only for the provision it was issued for. Enable it to fetch the next page.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "1 to 100, default 20, and no more than your plan allows."
+                    }
+                  ]
+                },
+                "description": "Judgments citing exactly this provision, newest first. A list for section 302 of the Penal Code does not include judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. Some matters are never listed. `listAvailable` is false for a provision we do not list judgments for, including sexual offences and cruelty provisions; that says nothing about whether any exist. A page can hold fewer rows than `limit`, or none, while `pagination.hasMore` is true, so keep following `pagination.nextCursor` until `hasMore` is false. Costs 1 credit when it returns something. Nothing returned costs nothing. A failed check returns 502 `UPSTREAM_UNAVAILABLE`, not charged, safe to retry once. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"section\": {\n      \"actSlug\": \"indian-penal-code-1860\",\n      \"slug\": \"section-302\",\n      \"number\": \"302\"\n    },\n    \"listAvailable\": true,\n    \"note\": \"Not an exhaustive list of every judgment applying this provision. An empty list does not mean no judgment applied it.\",\n    \"cases\": []\n  },\n  \"meta\": {\n    \"creditsCharged\": 0,\n    \"metered\": true\n  },\n  \"pagination\": {\n    \"limit\": 20,\n    \"hasMore\": true,\n    \"nextCursor\": \"opaque-cursor-string\"\n  }\n}"
             },
             {
               "name": "404 Provision not found, not charged",
@@ -4010,7 +4060,7 @@
                     }
                   ]
                 },
-                "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+                "description": "Judgments citing exactly this provision, newest first. A list for section 302 of the Penal Code does not include judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. Some matters are never listed. `listAvailable` is false for a provision we do not list judgments for, including sexual offences and cruelty provisions; that says nothing about whether any exist. A page can hold fewer rows than `limit`, or none, while `pagination.hasMore` is true, so keep following `pagination.nextCursor` until `hasMore` is false. Costs 1 credit when it returns something. Nothing returned costs nothing. A failed check returns 502 `UPSTREAM_UNAVAILABLE`, not charged, safe to retry once. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
               },
               "status": "Not Found",
               "code": 404,
@@ -4060,7 +4110,7 @@
                     }
                   ]
                 },
-                "description": "Judgments citing exactly this provision, newest first. A search for section 302 of the Penal Code does not return judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. `listAvailable` is false for a provision we cannot list judgments for. Matters that are withheld are left out, and `meta.someRecordsWithheld` says so. If that check could not run, titles are masked and `meta.restrictedCheckDegraded` is true. Costs 1 credit when it returns something; an empty result costs nothing. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
+                "description": "Judgments citing exactly this provision, newest first. A list for section 302 of the Penal Code does not include judgments that cite only its successor. Read one with `GET /cases/{id}`. Not an exhaustive list of every judgment applying the provision, and an empty list does not mean no judgment applied it. Some matters are never listed. `listAvailable` is false for a provision we do not list judgments for, including sexual offences and cruelty provisions; that says nothing about whether any exist. A page can hold fewer rows than `limit`, or none, while `pagination.hasMore` is true, so keep following `pagination.nextCursor` until `hasMore` is false. Costs 1 credit when it returns something. Nothing returned costs nothing. A failed check returns 502 `UPSTREAM_UNAVAILABLE`, not charged, safe to retry once. A provision that does not exist is 404 `SECTION_NOT_FOUND`, not charged."
               },
               "status": "Bad Gateway",
               "code": 502,
@@ -4125,7 +4175,7 @@
                 }
               ]
             },
-            "description": "Full text search across provisions, with a short snippet per row. Narrow it to one act with `act`, or to an exact provision number with `number`. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. Check `actRepealed` and `repealedProvision` on each row. Costs 1 credit when it returns something; an empty result costs nothing."
+            "description": "Full text search across provisions, with a short snippet per row. Narrow it to one act with `act`, or to an exact provision number with `number`. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. Check `actRepealed` and `repealedProvision` on each row. Costs 1 credit when it returns something; an empty result costs nothing. This request has a lower per minute limit than other calls and is refused with 429 above it."
           },
           "response": [
             {
@@ -4177,7 +4227,7 @@
                     }
                   ]
                 },
-                "description": "Full text search across provisions, with a short snippet per row. Narrow it to one act with `act`, or to an exact provision number with `number`. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. Check `actRepealed` and `repealedProvision` on each row. Costs 1 credit when it returns something; an empty result costs nothing."
+                "description": "Full text search across provisions, with a short snippet per row. Narrow it to one act with `act`, or to an exact provision number with `number`. `pagination.total` counts matches before unpublished records are removed, so a page can hold fewer rows than `limit`. Check `actRepealed` and `repealedProvision` on each row. Costs 1 credit when it returns something; an empty result costs nothing. This request has a lower per minute limit than other calls and is refused with 429 above it."
               },
               "status": "OK",
               "code": 200,
@@ -4220,7 +4270,7 @@
                 }
               ]
             },
-            "description": "Turns shorthand such as \"section 302 IPC\", \"s.138 NI Act\" or \"Article 21\" into the provision it names. A lettered section keeps its letter, so 498A is never answered with 498. \"Order VII Rule 11 CPC\" is not resolved and returns no match. `ambiguous` is true when no act was named, and the caller should then choose or name the act. Costs 1 credit when it returns something; an empty result costs nothing."
+            "description": "Turns shorthand such as \"section 302 IPC\", \"s.138 NI Act\" or \"Article 21\" into the provision it names. A lettered section keeps its letter, so 498A is never answered with 498. \"Order VII Rule 11 CPC\" is not resolved and returns no match. `ambiguous` is true when no act was named, and the caller should then choose or name the act. Costs 1 credit when it returns something; an empty result costs nothing. This request has a lower per minute limit than other calls and is refused with 429 above it."
           },
           "response": [
             {
@@ -4250,7 +4300,7 @@
                     }
                   ]
                 },
-                "description": "Turns shorthand such as \"section 302 IPC\", \"s.138 NI Act\" or \"Article 21\" into the provision it names. A lettered section keeps its letter, so 498A is never answered with 498. \"Order VII Rule 11 CPC\" is not resolved and returns no match. `ambiguous` is true when no act was named, and the caller should then choose or name the act. Costs 1 credit when it returns something; an empty result costs nothing."
+                "description": "Turns shorthand such as \"section 302 IPC\", \"s.138 NI Act\" or \"Article 21\" into the provision it names. A lettered section keeps its letter, so 498A is never answered with 498. \"Order VII Rule 11 CPC\" is not resolved and returns no match. `ambiguous` is true when no act was named, and the caller should then choose or name the act. Costs 1 credit when it returns something; an empty result costs nothing. This request has a lower per minute limit than other calls and is refused with 429 above it."
               },
               "status": "OK",
               "code": 200,
