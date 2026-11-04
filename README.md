@@ -11,10 +11,10 @@ File: [`CourtMesh.postman_collection.json`](./CourtMesh.postman_collection.json)
 | folder | requests |
 | --- | --- |
 | Search | `POST /search/cases`, `POST /search/cases/semantic` |
-| Cases | `GET /cases/{id}`, `GET /cases/{id}/related`, `GET /cases/{id}/pdf` |
+| Cases | `GET /cases/{id}`, `GET /cases/{id}/related`, `GET /cases/{id}/pdf`, `GET /cases/{id}/orders`, `GET /cases/{id}/orders/{documentId}/text` |
 | Analysis | `GET /cases/{id}/analysis`, `POST /cases/{id}/analyze`, `POST /cases/{id}/analyze-consolidated` |
 | Judges | `GET /judges/search` |
-| CNR Lookup | `GET /cases/by-cnr/{cnr}`, `POST /search/cases` with `cnr` |
+| CNR Lookup | `GET /cases/by-cnr/{cnr}`, `POST /search/cases` with `cnr`, `POST` and `GET /cases/by-cnr/{cnr}/refresh`, `POST /cases/refresh/batch` |
 | Monitoring | watchlists (`/watchlists`, `/watchlists/{id}`, `/watchlists/{id}/items`, `/watchlists/{id}/items/{cnr}`), the change feed (`GET /changes`, `GET /watchlists/{id}/events`), webhooks (`/webhooks`, `/webhooks/{id}`, `rotate-secret`, `test`, `deliveries`, delivery `retry`) |
 | Timeline | `POST /request-timeline`, `GET /get-timeline/{requestId}` |
 | Litigation Check | `POST /party/screen`, `POST /party/screen/batch` |
