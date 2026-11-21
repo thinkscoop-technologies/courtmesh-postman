@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3f2b6c41-8a9d-4c77-9f2e-1d5b7a0c4e63",
     "name": "CourtMesh API: Indian Court Cases",
-    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| profileRequestId | A full mode party profile id (ppr_...) returned by POST /party/profile |\n| userId | A user id for GET /audit's userId query param. Call GET /me first to get your own id |\n| cnr | A CNR such as ZZAB010000012024, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n| documentId | A document id from List the orders of a case |\n| matterId | A 24 character matter id, used by the cause listings of one matter |\n| courtKey | A court key from a cause listing, used by the court cause list |\n| actSlug | An act slug such as indian-penal-code-1860, used by the Acts and Sections requests |\n| sectionSlug | A provision slug such as section-302, used by the Acts and Sections requests |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints page differently.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /party/profile, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). The cause list check (POST /cause-lists/check) honours it too. Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST | /party/profile | Litigation Check |\n| GET | /party/profile/{requestId} | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /cases/{id}/orders | Cases |\n| GET | /cases/{id}/orders/{documentId}/text | Cases |\n| POST | /cases/by-cnr/{cnr}/refresh | CNR Lookup |\n| GET | /cases/by-cnr/{cnr}/refresh | CNR Lookup |\n| POST | /cases/refresh/batch | CNR Lookup |\n| GET | /cause-lists/listings | Cause lists |\n| GET | /matters/{matterId}/cause-listings | Cause lists |\n| GET | /cause-lists/court | Cause lists |\n| POST | /cause-lists/check | Cause lists |\n| GET | /acts/search | Acts and Sections |\n| GET | /acts/resolve | Acts and Sections |\n| GET | /acts/{slug} | Acts and Sections |\n| GET | /acts/{slug}/history | Acts and Sections |\n| GET | /acts/{slug}/sections | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug} | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug}/citing-cases | Acts and Sections |\n| GET | /sections/search | Acts and Sections |\n| GET | /sections/lookup | Acts and Sections |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit | Account |\n| DELETE | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
+    "description": "# CourtMesh API: Indian court cases\n\nA REST API over Indian court judgments and orders: the Supreme Court, every High Court, District Courts and tribunals. Search by keyword or by meaning, pull a single judgment with its parties and bench, read a structured AI analysis, follow a matter's order sheet over time, and download the source PDF.\n\nBase URL: `https://research.courtmesh.ai/api/v1/prod`\n\n## Getting a key\n\nAPI keys are issued from the CourtMesh dashboard at https://research.courtmesh.ai. A key looks like `cm-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXX`. Keys issued before the rename start with `vv-` and still work.\n\n## Authentication\n\nEvery endpoint except `GET /health` needs a key. Two header forms are accepted:\n\n```\nAuthorization: Bearer cm-your-key-here\n```\n\n```\nX-API-Key: cm-your-key-here\n```\n\nThis collection uses the bearer form at the collection level, so set the `apiKey` variable once and every request inherits it.\n\n## Collection variables\n\n| variable | meaning |\n| --- | --- |\n| baseUrl | API root. Defaults to the production host |\n| apiKey | Your API key. Leave it out of source control, use a Postman environment |\n| caseId | A case identifier used by the case level requests. Accepts a 24 character hexadecimal case id or a case number |\n| requestId | A timeline job id returned by POST /request-timeline |\n| profileRequestId | A full mode party profile id (ppr_...) returned by POST /party/profile |\n| userId | A user id for the userId filter of GET /audit/records. Call GET /me first to get your own id |\n| auditRequestId | The X-Request-Id response header of a call, used by GET /audit/{requestId}/pdf and the requestId filter of GET /audit/records |\n| cnr | A CNR such as ZZAB010000012024, used by the CNR lookup and monitoring requests |\n| watchlistId | A watchlist id (wl_...) from Create a watchlist |\n| webhookId | A webhook id (wh_...) from Create a webhook |\n| deliveryId | A delivery id (whd_...) from List webhook deliveries |\n| changesCursor | The pagination.nextCursor from the previous List changes call |\n| documentId | A document id from List the orders of a case |\n| matterId | A 24 character matter id, used by the cause listings of one matter |\n| courtKey | A court key from a cause listing, used by the court cause list |\n| actSlug | An act slug such as indian-penal-code-1860, used by the Acts and Sections requests |\n| sectionSlug | A provision slug such as section-302, used by the Acts and Sections requests |\n\n## Response envelope\n\nEvery endpoint except `GET /health` returns:\n\n```json\n{ \"success\": true, \"data\": {}, \"meta\": {}, \"pagination\": {} }\n```\n\n`meta` and `pagination` appear only where the endpoint provides them. Failures return `{ \"success\": false, \"error\": \"...\" }`, with an extra `details` array of human readable messages when request validation failed.\n\nAuthentication and rate limit failures come from middleware and are not wrapped, they are a bare `{ \"error\": \"...\" }`.\n\nEvery response, success or failure, carries an `X-Request-Id` response header. Some endpoints (for example `GET /usage`, `POST /party/screen/batch`) also echo it as `meta.requestId` in the body; quote either one when reporting a problem to CourtMesh support.\n\n## Rate limits\n\n10 requests per minute per API key. Successful responses carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. A 429 body carries `retryAfter` in seconds and `resetTime` as an ISO timestamp. Back off and retry, do not hammer.\n\n## Pagination\n\nTwo shapes, because the two search endpoints page differently.\n\n`POST /search/cases` returns `{ total, hasMore, page, limit, nextCursor }`. There is no `totalPages`. For deep pagination, send the previous `nextCursor` back as `searchAfter`, in which case `page` is omitted from the response.\n\n`POST /search/cases/semantic` returns `{ page, limit, total, totalPages, hasMore }`, where `total` and `totalPages` are estimates that only become exact on the final page.\n\n## Idempotency\n\nPOST /party/screen, POST /party/screen/batch, POST /party/profile, POST /cases/{id}/analyze, POST /cases/{id}/analyze-consolidated and POST /request-timeline each accept an optional `Idempotency-Key` header, 1 to 128 characters, `[A-Za-z0-9_.-]`. Of the monitoring requests, only create watchlist and add cases to a watchlist honour it (the webhook requests do not take one). The cause list check (POST /cause-lists/check) honours it too. Every request for these endpoints in this collection carries one, defaulted to Postman's `{{$guid}}` dynamic variable (a fresh UUID v4 generated on every send).\n\nThe key is scoped per API key for 24 hours: replaying the same key with the same request body returns the original 2xx response again, with response header `Idempotency-Replayed: true`, and no new charge. The same key with a different body is refused with 409 `IDEMPOTENCY_KEY_REUSED`. A request with this key still being processed is refused with 409 `IDEMPOTENCY_IN_PROGRESS`. A malformed key is refused with 400 `IDEMPOTENCY_KEY_INVALID`.\n\nBecause `{{$guid}}` regenerates on every send, re-sending one of these requests from the Postman UI runs as a new, separately charged call each time, by design. To deliberately exercise the replay behaviour, replace the header value with a fixed string before sending the same request twice.\n\n## Endpoints\n\n| method | path | folder |\n| --- | --- | --- |\n| POST | /search/cases | Search |\n| POST | /search/cases/semantic | Search |\n| GET | /cases/{id} | Cases |\n| GET | /cases/{id}/related | Cases |\n| GET | /cases/{id}/pdf | Cases |\n| GET | /cases/{id}/analysis | Analysis |\n| POST | /cases/{id}/analyze | Analysis |\n| POST | /cases/{id}/analyze-consolidated | Analysis |\n| GET | /judges/search | Judges |\n| GET | /cases/by-cnr/{cnr} | CNR Lookup |\n| POST | /request-timeline | Timeline |\n| GET | /get-timeline/{requestId} | Timeline |\n| POST | /party/screen | Litigation Check |\n| POST | /party/screen/batch | Litigation Check |\n| POST | /party/profile | Litigation Check |\n| GET | /party/profile/{requestId} | Litigation Check |\n| POST, GET | /watchlists | Monitoring |\n| GET, PATCH, DELETE | /watchlists/{id} | Monitoring |\n| POST, GET | /watchlists/{id}/items | Monitoring |\n| DELETE | /watchlists/{id}/items/{cnr} | Monitoring |\n| GET | /changes | Monitoring |\n| GET | /watchlists/{id}/events | Monitoring |\n| POST, GET | /webhooks | Monitoring |\n| GET, PATCH, DELETE | /webhooks/{id} | Monitoring |\n| POST | /webhooks/{id}/rotate-secret | Monitoring |\n| POST | /webhooks/{id}/test | Monitoring |\n| GET | /webhooks/{id}/deliveries | Monitoring |\n| POST | /webhooks/{id}/deliveries/{deliveryId}/retry | Monitoring |\n| GET | /cases/{id}/orders | Cases |\n| GET | /cases/{id}/orders/{documentId}/text | Cases |\n| POST | /cases/by-cnr/{cnr}/refresh | CNR Lookup |\n| GET | /cases/by-cnr/{cnr}/refresh | CNR Lookup |\n| POST | /cases/refresh/batch | CNR Lookup |\n| GET | /cause-lists/listings | Cause lists |\n| GET | /matters/{matterId}/cause-listings | Cause lists |\n| GET | /cause-lists/court | Cause lists |\n| POST | /cause-lists/check | Cause lists |\n| GET | /acts/search | Acts and Sections |\n| GET | /acts/resolve | Acts and Sections |\n| GET | /acts/{slug} | Acts and Sections |\n| GET | /acts/{slug}/history | Acts and Sections |\n| GET | /acts/{slug}/sections | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug} | Acts and Sections |\n| GET | /acts/{slug}/sections/{sectionSlug}/citing-cases | Acts and Sections |\n| GET | /sections/search | Acts and Sections |\n| GET | /sections/lookup | Acts and Sections |\n| GET | /usage | Account |\n| GET | /me | Account |\n| GET | /audit/records | Account |\n| GET | /audit/{requestId}/pdf | Account |\n| DELETE | /audit | Account |\n| GET | /reference/courts | Reference |\n| GET | /reference/case-types | Reference |\n| GET | /coverage | Coverage |\n| GET | /health | System |\n| GET | /health?deep=1 | System |\n\n## Official SDKs\n\nPython: `pip install courtmesh`\n\nNode and TypeScript: `npm install @courtmesh/sdk`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "courtmesh",
     "version": "0.6.0"
@@ -75,7 +75,13 @@
       "key": "userId",
       "value": "",
       "type": "string",
-      "description": "A user id for GET /audit's userId query param. Call GET /me first to get your own id."
+      "description": "A user id for the userId filter of GET /audit/records. Call GET /me first to get your own id."
+    },
+    {
+      "key": "auditRequestId",
+      "value": "",
+      "type": "string",
+      "description": "The X-Request-Id response header of a call, used by GET /audit/{requestId}/pdf and the requestId filter of GET /audit/records."
     },
     {
       "key": "cnr",
@@ -9145,7 +9151,7 @@
     },
     {
       "name": "Account",
-      "description": "Account introspection: usage and billing, your own identity, and your logged API calls, plus deleting this key's own logged calls before a time (DELETE /audit, which cannot be undone). All four are unmetered.",
+      "description": "Account introspection: usage and billing, your own identity, the access audit of your organisation (GET /audit/records, and the PDF record of one call), plus deleting this key's own logged calls before a time (DELETE /audit, which cannot be undone). All are unmetered. GET /audit was retired on 21 Nov 2026 and answers 410 ENDPOINT_MOVED; use GET /audit/records.",
       "item": [
         {
           "name": "Get usage",
@@ -9226,7 +9232,7 @@
                 "me"
               ]
             },
-            "description": "The calling account's own id, email, name, role and (if any) organization id. Use this to get your own organizationId before calling GET /audit with organizationId."
+            "description": "The calling account's own id, email, name, role and (if any) organization id. Use this to get your own userId for the userId filter of GET /audit/records."
           },
           "response": [
             {
@@ -9248,7 +9254,7 @@
                     "me"
                   ]
                 },
-                "description": "The calling account's own id, email, name, role and (if any) organization id. Use this to get your own organizationId before calling GET /audit with organizationId."
+                "description": "The calling account's own id, email, name, role and (if any) organization id. Use this to get your own userId for the userId filter of GET /audit/records."
               },
               "status": "OK",
               "code": 200,
@@ -9268,7 +9274,7 @@
           ]
         },
         {
-          "name": "Get audit log",
+          "name": "List access audit records",
           "request": {
             "method": "GET",
             "header": [
@@ -9278,33 +9284,92 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/audit?userId={{userId}}&limit=50&offset=0",
+              "raw": "{{baseUrl}}/audit/records?order=newest&limit=50",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "audit"
+                "audit",
+                "records"
               ],
               "query": [
                 {
+                  "key": "name",
+                  "value": "Example Person",
+                  "description": "A screened name or search text. Whole words, any order, any case.",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2026-11-20",
+                  "description": "At or after. A date alone is the start of that day, India time.",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-20",
+                  "description": "At or before. A date alone is the end of that day, India time.",
+                  "disabled": true
+                },
+                {
+                  "key": "source",
+                  "value": "api",
+                  "description": "api or web.",
+                  "disabled": true
+                },
+                {
+                  "key": "feature",
+                  "value": "Party screen",
+                  "description": "One check, for example Party screen, Case search, AI search.",
+                  "disabled": true
+                },
+                {
+                  "key": "apiKeyId",
+                  "value": "",
+                  "description": "Only this key. Narrows, never widens.",
+                  "disabled": true
+                },
+                {
                   "key": "userId",
-                  "value": "{{userId}}"
+                  "value": "{{userId}}",
+                  "description": "Only this user. Narrows, never widens. From Get my account (me).",
+                  "disabled": true
+                },
+                {
+                  "key": "requestId",
+                  "value": "{{auditRequestId}}",
+                  "description": "The X-Request-Id a call returned.",
+                  "disabled": true
+                },
+                {
+                  "key": "clientRef",
+                  "value": "candidate-3381",
+                  "description": "Your X-Client-Reference, or a batch item clientRef.",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "newest",
+                  "description": "newest (default) or oldest."
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "data.nextCursor from the previous page.",
+                  "disabled": true
                 },
                 {
                   "key": "limit",
-                  "value": "50"
-                },
-                {
-                  "key": "offset",
-                  "value": "0"
+                  "value": "50",
+                  "description": "1 to 100, default 50."
                 }
               ]
             },
-            "description": "This API key's own logged calls (or, for an org admin, an organization's), with summary stats and a top endpoints breakdown.\n\nQuery params: organizationId (must be the caller's own org, or 403), userId (must be the caller's own id, or an org admin's teammate, or 403), limit (1 to 200, default 50), offset (default 0), startDate/endDate (ISO 8601). Exactly one of organizationId/userId should be sent; call GET /me first to get your own id.\n\ndata: { hits: [{ id, userId, organizationId, endpoint, method, statusCode, responseTime, isAiAnalysis, creditsDeducted, metadata, ipAddress, userAgent, createdAt }], summary: { totalHits, totalAiAnalysisHits, avgResponseTime, successfulHits, successRate, totalCreditsDeducted }, topEndpoints: [{ endpoint, count }] }. pagination: { total, limit, offset, hasMore }."
+            "description": "The access audit of your organisation: a record of every call made with your organisation's keys and every search made on the website by its users, who ran it, when, the input and the outcome. Available to organisations with access audit switched on; for any other account the list is empty and `data.auditEnabled` is false. Free and unmetered.\n\nA key owned by an organisation admin sees every record of the organisation (all users, all keys, revoked keys included); any other key sees only its own records. Each record names the API key (its name and masked value, as they were at the time) or the website user that ran it. The full input and response are in the PDF (Get the audit record PDF of one call) and on the Access audit page of the website.\n\nThis replaces `GET /audit`, which was retired on 21 Nov 2026 and now answers 410 with code `ENDPOINT_MOVED`.\n\nQuery params, all optional (tick the ones you need):\n- `name`: a screened name or the text of a search. Matches the exact text used, or any entry that contains every whole word given, regardless of case, punctuation and word order. Part of a word does not match. At most 300 characters.\n- `from`, `to`: a date and time. A date with no time (2026-11-20) means the start (`from`) or end (`to`) of that day in India time, so the same date in both gives that whole day.\n- `source`: `api` or `web`.\n- `feature`: one check, in any case: Party screen, Bulk party screen, Party profile, Case search, AI search, Case lookup by CNR, Case view, Case orders, Document download, Case analysis, Case timeline, FIR linked cases, Acts and sections, Cause lists, Monitoring, Webhooks, Judge search, Account, Other.\n- `apiKeyId`, `userId`: only this key or user. Narrows what you may see, never widens it. Call Get my account (me) for your own userId.\n- `requestId`: the `X-Request-Id` a call returned.\n- `clientRef`: the `X-Client-Reference` header you sent on a call, or a batch item clientRef.\n- `order`: `newest` (default) or `oldest`. Keep the same order when passing a cursor.\n- `cursor`: the `data.nextCursor` of the previous page. Page until it is null.\n- `limit`: 1 to 100, default 50.\n\ndata: { items: [{ id, createdAt, source, sourceLabel, person, userId, apiKeyId, apiKeyName, apiKeyDisplay, feature, inputLabel, summary, statusCode, requestId, clientRefs, replayOf, client }], nextCursor, auditEnabled }. meta: { creditsCharged: 0, message (only when there is something to tell you, for example that access audit is not switched on) }."
           },
           "response": [
             {
-              "name": "200 Audit log",
+              "name": "200 Access audit records",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -9314,29 +9379,88 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/audit?userId={{userId}}&limit=50&offset=0",
+                  "raw": "{{baseUrl}}/audit/records?order=newest&limit=50",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "audit"
+                    "audit",
+                    "records"
                   ],
                   "query": [
                     {
+                      "key": "name",
+                      "value": "Example Person",
+                      "description": "A screened name or search text. Whole words, any order, any case.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-11-20",
+                      "description": "At or after. A date alone is the start of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-20",
+                      "description": "At or before. A date alone is the end of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "source",
+                      "value": "api",
+                      "description": "api or web.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "feature",
+                      "value": "Party screen",
+                      "description": "One check, for example Party screen, Case search, AI search.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "apiKeyId",
+                      "value": "",
+                      "description": "Only this key. Narrows, never widens.",
+                      "disabled": true
+                    },
+                    {
                       "key": "userId",
-                      "value": "{{userId}}"
+                      "value": "{{userId}}",
+                      "description": "Only this user. Narrows, never widens. From Get my account (me).",
+                      "disabled": true
+                    },
+                    {
+                      "key": "requestId",
+                      "value": "{{auditRequestId}}",
+                      "description": "The X-Request-Id a call returned.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "clientRef",
+                      "value": "candidate-3381",
+                      "description": "Your X-Client-Reference, or a batch item clientRef.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "newest",
+                      "description": "newest (default) or oldest."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "data.nextCursor from the previous page.",
+                      "disabled": true
                     },
                     {
                       "key": "limit",
-                      "value": "50"
-                    },
-                    {
-                      "key": "offset",
-                      "value": "0"
+                      "value": "50",
+                      "description": "1 to 100, default 50."
                     }
                   ]
                 },
-                "description": "This API key's own logged calls (or, for an org admin, an organization's), with summary stats and a top endpoints breakdown.\n\nQuery params: organizationId (must be the caller's own org, or 403), userId (must be the caller's own id, or an org admin's teammate, or 403), limit (1 to 200, default 50), offset (default 0), startDate/endDate (ISO 8601). Exactly one of organizationId/userId should be sent; call GET /me first to get your own id.\n\ndata: { hits: [{ id, userId, organizationId, endpoint, method, statusCode, responseTime, isAiAnalysis, creditsDeducted, metadata, ipAddress, userAgent, createdAt }], summary: { totalHits, totalAiAnalysisHits, avgResponseTime, successfulHits, successRate, totalCreditsDeducted }, topEndpoints: [{ endpoint, count }] }. pagination: { total, limit, offset, hasMore }."
+                "description": "The access audit of your organisation: a record of every call made with your organisation's keys and every search made on the website by its users, who ran it, when, the input and the outcome. Available to organisations with access audit switched on; for any other account the list is empty and `data.auditEnabled` is false. Free and unmetered.\n\nA key owned by an organisation admin sees every record of the organisation (all users, all keys, revoked keys included); any other key sees only its own records. Each record names the API key (its name and masked value, as they were at the time) or the website user that ran it. The full input and response are in the PDF (Get the audit record PDF of one call) and on the Access audit page of the website.\n\nThis replaces `GET /audit`, which was retired on 21 Nov 2026 and now answers 410 with code `ENDPOINT_MOVED`.\n\nQuery params, all optional (tick the ones you need):\n- `name`: a screened name or the text of a search. Matches the exact text used, or any entry that contains every whole word given, regardless of case, punctuation and word order. Part of a word does not match. At most 300 characters.\n- `from`, `to`: a date and time. A date with no time (2026-11-20) means the start (`from`) or end (`to`) of that day in India time, so the same date in both gives that whole day.\n- `source`: `api` or `web`.\n- `feature`: one check, in any case: Party screen, Bulk party screen, Party profile, Case search, AI search, Case lookup by CNR, Case view, Case orders, Document download, Case analysis, Case timeline, FIR linked cases, Acts and sections, Cause lists, Monitoring, Webhooks, Judge search, Account, Other.\n- `apiKeyId`, `userId`: only this key or user. Narrows what you may see, never widens it. Call Get my account (me) for your own userId.\n- `requestId`: the `X-Request-Id` a call returned.\n- `clientRef`: the `X-Client-Reference` header you sent on a call, or a batch item clientRef.\n- `order`: `newest` (default) or `oldest`. Keep the same order when passing a cursor.\n- `cursor`: the `data.nextCursor` of the previous page. Page until it is null.\n- `limit`: 1 to 100, default 50.\n\ndata: { items: [{ id, createdAt, source, sourceLabel, person, userId, apiKeyId, apiKeyName, apiKeyDisplay, feature, inputLabel, summary, statusCode, requestId, clientRefs, replayOf, client }], nextCursor, auditEnabled }. meta: { creditsCharged: 0, message (only when there is something to tell you, for example that access audit is not switched on) }."
               },
               "status": "OK",
               "code": 200,
@@ -9351,10 +9475,10 @@
                   "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"hits\": [\n      {\n        \"id\": \"64f0abc0000000000000a01\",\n        \"userId\": \"64f0abc0000000000000001\",\n        \"endpoint\": \"/api/v1/prod/search/cases\",\n        \"method\": \"POST\",\n        \"statusCode\": 200,\n        \"responseTime\": 120,\n        \"isAiAnalysis\": false,\n        \"creditsDeducted\": 0,\n        \"createdAt\": \"2026-09-18T09:00:00.000Z\"\n      }\n    ],\n    \"summary\": {\n      \"totalHits\": 1,\n      \"totalAiAnalysisHits\": 0,\n      \"avgResponseTime\": 120,\n      \"successfulHits\": 1,\n      \"successRate\": \"100.0\",\n      \"totalCreditsDeducted\": 0\n    },\n    \"topEndpoints\": [\n      {\n        \"endpoint\": \"/api/v1/prod/search/cases\",\n        \"count\": 1\n      }\n    ]\n  },\n  \"pagination\": {\n    \"total\": 1,\n    \"limit\": 50,\n    \"offset\": 0,\n    \"hasMore\": false\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"items\": [\n      {\n        \"id\": \"673d9a1f2c4b5e6f7a8b9c0d\",\n        \"createdAt\": \"2026-11-20T09:15:02.000Z\",\n        \"source\": \"api\",\n        \"sourceLabel\": \"API key: Production\",\n        \"person\": \"ops@example.com\",\n        \"userId\": \"673d9a1f2c4b5e6f7a8b9c02\",\n        \"apiKeyId\": \"673d9a1f2c4b5e6f7a8b9c01\",\n        \"apiKeyName\": \"Production\",\n        \"apiKeyDisplay\": \"cm-...A1b2\",\n        \"feature\": \"Party screen\",\n        \"inputLabel\": \"Example Person\",\n        \"summary\": {\n          \"verdict\": \"matches_found\",\n          \"matchCount\": 2,\n          \"creditsCharged\": 5\n        },\n        \"statusCode\": 200,\n        \"requestId\": \"9b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e\",\n        \"clientRefs\": [\n          \"candidate-3381\"\n        ],\n        \"replayOf\": null\n      }\n    ],\n    \"nextCursor\": null,\n    \"auditEnabled\": true\n  },\n  \"meta\": {\n    \"creditsCharged\": 0\n  }\n}"
             },
             {
-              "name": "403 Access denied (userId not your own, and not an org admin)",
+              "name": "200 Access audit not switched on",
               "originalRequest": {
                 "method": "GET",
                 "header": [
@@ -9364,32 +9488,91 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/audit?userId={{userId}}&limit=50&offset=0",
+                  "raw": "{{baseUrl}}/audit/records?order=newest&limit=50",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "audit"
+                    "audit",
+                    "records"
                   ],
                   "query": [
                     {
+                      "key": "name",
+                      "value": "Example Person",
+                      "description": "A screened name or search text. Whole words, any order, any case.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-11-20",
+                      "description": "At or after. A date alone is the start of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-20",
+                      "description": "At or before. A date alone is the end of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "source",
+                      "value": "api",
+                      "description": "api or web.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "feature",
+                      "value": "Party screen",
+                      "description": "One check, for example Party screen, Case search, AI search.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "apiKeyId",
+                      "value": "",
+                      "description": "Only this key. Narrows, never widens.",
+                      "disabled": true
+                    },
+                    {
                       "key": "userId",
-                      "value": "{{userId}}"
+                      "value": "{{userId}}",
+                      "description": "Only this user. Narrows, never widens. From Get my account (me).",
+                      "disabled": true
+                    },
+                    {
+                      "key": "requestId",
+                      "value": "{{auditRequestId}}",
+                      "description": "The X-Request-Id a call returned.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "clientRef",
+                      "value": "candidate-3381",
+                      "description": "Your X-Client-Reference, or a batch item clientRef.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "newest",
+                      "description": "newest (default) or oldest."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "data.nextCursor from the previous page.",
+                      "disabled": true
                     },
                     {
                       "key": "limit",
-                      "value": "50"
-                    },
-                    {
-                      "key": "offset",
-                      "value": "0"
+                      "value": "50",
+                      "description": "1 to 100, default 50."
                     }
                   ]
                 },
-                "description": "This API key's own logged calls (or, for an org admin, an organization's), with summary stats and a top endpoints breakdown.\n\nQuery params: organizationId (must be the caller's own org, or 403), userId (must be the caller's own id, or an org admin's teammate, or 403), limit (1 to 200, default 50), offset (default 0), startDate/endDate (ISO 8601). Exactly one of organizationId/userId should be sent; call GET /me first to get your own id.\n\ndata: { hits: [{ id, userId, organizationId, endpoint, method, statusCode, responseTime, isAiAnalysis, creditsDeducted, metadata, ipAddress, userAgent, createdAt }], summary: { totalHits, totalAiAnalysisHits, avgResponseTime, successfulHits, successRate, totalCreditsDeducted }, topEndpoints: [{ endpoint, count }] }. pagination: { total, limit, offset, hasMore }."
+                "description": "The access audit of your organisation: a record of every call made with your organisation's keys and every search made on the website by its users, who ran it, when, the input and the outcome. Available to organisations with access audit switched on; for any other account the list is empty and `data.auditEnabled` is false. Free and unmetered.\n\nA key owned by an organisation admin sees every record of the organisation (all users, all keys, revoked keys included); any other key sees only its own records. Each record names the API key (its name and masked value, as they were at the time) or the website user that ran it. The full input and response are in the PDF (Get the audit record PDF of one call) and on the Access audit page of the website.\n\nThis replaces `GET /audit`, which was retired on 21 Nov 2026 and now answers 410 with code `ENDPOINT_MOVED`.\n\nQuery params, all optional (tick the ones you need):\n- `name`: a screened name or the text of a search. Matches the exact text used, or any entry that contains every whole word given, regardless of case, punctuation and word order. Part of a word does not match. At most 300 characters.\n- `from`, `to`: a date and time. A date with no time (2026-11-20) means the start (`from`) or end (`to`) of that day in India time, so the same date in both gives that whole day.\n- `source`: `api` or `web`.\n- `feature`: one check, in any case: Party screen, Bulk party screen, Party profile, Case search, AI search, Case lookup by CNR, Case view, Case orders, Document download, Case analysis, Case timeline, FIR linked cases, Acts and sections, Cause lists, Monitoring, Webhooks, Judge search, Account, Other.\n- `apiKeyId`, `userId`: only this key or user. Narrows what you may see, never widens it. Call Get my account (me) for your own userId.\n- `requestId`: the `X-Request-Id` a call returned.\n- `clientRef`: the `X-Client-Reference` header you sent on a call, or a batch item clientRef.\n- `order`: `newest` (default) or `oldest`. Keep the same order when passing a cursor.\n- `cursor`: the `data.nextCursor` of the previous page. Page until it is null.\n- `limit`: 1 to 100, default 50.\n\ndata: { items: [{ id, createdAt, source, sourceLabel, person, userId, apiKeyId, apiKeyName, apiKeyDisplay, feature, inputLabel, summary, statusCode, requestId, clientRefs, replayOf, client }], nextCursor, auditEnabled }. meta: { creditsCharged: 0, message (only when there is something to tell you, for example that access audit is not switched on) }."
               },
-              "status": "Forbidden",
-              "code": 403,
+              "status": "OK",
+              "code": 200,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -9401,7 +9584,407 @@
                   "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
                 }
               ],
-              "body": "{\n  \"success\": false,\n  \"error\": \"Access denied\",\n  \"details\": \"You can only access your own audit data\"\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"items\": [],\n    \"nextCursor\": null,\n    \"auditEnabled\": false\n  },\n  \"meta\": {\n    \"creditsCharged\": 0,\n    \"message\": \"Access audit is not switched on for your organisation. Contact us to switch it on.\"\n  }\n}"
+            },
+            {
+              "name": "400 A filter is not valid",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit/records?order=newest&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit",
+                    "records"
+                  ],
+                  "query": [
+                    {
+                      "key": "name",
+                      "value": "Example Person",
+                      "description": "A screened name or search text. Whole words, any order, any case.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-11-20",
+                      "description": "At or after. A date alone is the start of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-20",
+                      "description": "At or before. A date alone is the end of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "source",
+                      "value": "api",
+                      "description": "api or web.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "feature",
+                      "value": "Party screen",
+                      "description": "One check, for example Party screen, Case search, AI search.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "apiKeyId",
+                      "value": "",
+                      "description": "Only this key. Narrows, never widens.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "userId",
+                      "value": "{{userId}}",
+                      "description": "Only this user. Narrows, never widens. From Get my account (me).",
+                      "disabled": true
+                    },
+                    {
+                      "key": "requestId",
+                      "value": "{{auditRequestId}}",
+                      "description": "The X-Request-Id a call returned.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "clientRef",
+                      "value": "candidate-3381",
+                      "description": "Your X-Client-Reference, or a batch item clientRef.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "newest",
+                      "description": "newest (default) or oldest."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "data.nextCursor from the previous page.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "1 to 100, default 50."
+                    }
+                  ]
+                },
+                "description": "The access audit of your organisation: a record of every call made with your organisation's keys and every search made on the website by its users, who ran it, when, the input and the outcome. Available to organisations with access audit switched on; for any other account the list is empty and `data.auditEnabled` is false. Free and unmetered.\n\nA key owned by an organisation admin sees every record of the organisation (all users, all keys, revoked keys included); any other key sees only its own records. Each record names the API key (its name and masked value, as they were at the time) or the website user that ran it. The full input and response are in the PDF (Get the audit record PDF of one call) and on the Access audit page of the website.\n\nThis replaces `GET /audit`, which was retired on 21 Nov 2026 and now answers 410 with code `ENDPOINT_MOVED`.\n\nQuery params, all optional (tick the ones you need):\n- `name`: a screened name or the text of a search. Matches the exact text used, or any entry that contains every whole word given, regardless of case, punctuation and word order. Part of a word does not match. At most 300 characters.\n- `from`, `to`: a date and time. A date with no time (2026-11-20) means the start (`from`) or end (`to`) of that day in India time, so the same date in both gives that whole day.\n- `source`: `api` or `web`.\n- `feature`: one check, in any case: Party screen, Bulk party screen, Party profile, Case search, AI search, Case lookup by CNR, Case view, Case orders, Document download, Case analysis, Case timeline, FIR linked cases, Acts and sections, Cause lists, Monitoring, Webhooks, Judge search, Account, Other.\n- `apiKeyId`, `userId`: only this key or user. Narrows what you may see, never widens it. Call Get my account (me) for your own userId.\n- `requestId`: the `X-Request-Id` a call returned.\n- `clientRef`: the `X-Client-Reference` header you sent on a call, or a batch item clientRef.\n- `order`: `newest` (default) or `oldest`. Keep the same order when passing a cursor.\n- `cursor`: the `data.nextCursor` of the previous page. Page until it is null.\n- `limit`: 1 to 100, default 50.\n\ndata: { items: [{ id, createdAt, source, sourceLabel, person, userId, apiKeyId, apiKeyName, apiKeyDisplay, feature, inputLabel, summary, statusCode, requestId, clientRefs, replayOf, client }], nextCursor, auditEnabled }. meta: { creditsCharged: 0, message (only when there is something to tell you, for example that access audit is not switched on) }."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"Some filters are not valid: limit must be a whole number between 1 and 100.\",\n  \"error\": \"Some filters are not valid: limit must be a whole number between 1 and 100.\",\n  \"requestId\": \"8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f\"\n}"
+            },
+            {
+              "name": "503 Records could not be read (nothing charged)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit/records?order=newest&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit",
+                    "records"
+                  ],
+                  "query": [
+                    {
+                      "key": "name",
+                      "value": "Example Person",
+                      "description": "A screened name or search text. Whole words, any order, any case.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "2026-11-20",
+                      "description": "At or after. A date alone is the start of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-11-20",
+                      "description": "At or before. A date alone is the end of that day, India time.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "source",
+                      "value": "api",
+                      "description": "api or web.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "feature",
+                      "value": "Party screen",
+                      "description": "One check, for example Party screen, Case search, AI search.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "apiKeyId",
+                      "value": "",
+                      "description": "Only this key. Narrows, never widens.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "userId",
+                      "value": "{{userId}}",
+                      "description": "Only this user. Narrows, never widens. From Get my account (me).",
+                      "disabled": true
+                    },
+                    {
+                      "key": "requestId",
+                      "value": "{{auditRequestId}}",
+                      "description": "The X-Request-Id a call returned.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "clientRef",
+                      "value": "candidate-3381",
+                      "description": "Your X-Client-Reference, or a batch item clientRef.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "newest",
+                      "description": "newest (default) or oldest."
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "data.nextCursor from the previous page.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "1 to 100, default 50."
+                    }
+                  ]
+                },
+                "description": "The access audit of your organisation: a record of every call made with your organisation's keys and every search made on the website by its users, who ran it, when, the input and the outcome. Available to organisations with access audit switched on; for any other account the list is empty and `data.auditEnabled` is false. Free and unmetered.\n\nA key owned by an organisation admin sees every record of the organisation (all users, all keys, revoked keys included); any other key sees only its own records. Each record names the API key (its name and masked value, as they were at the time) or the website user that ran it. The full input and response are in the PDF (Get the audit record PDF of one call) and on the Access audit page of the website.\n\nThis replaces `GET /audit`, which was retired on 21 Nov 2026 and now answers 410 with code `ENDPOINT_MOVED`.\n\nQuery params, all optional (tick the ones you need):\n- `name`: a screened name or the text of a search. Matches the exact text used, or any entry that contains every whole word given, regardless of case, punctuation and word order. Part of a word does not match. At most 300 characters.\n- `from`, `to`: a date and time. A date with no time (2026-11-20) means the start (`from`) or end (`to`) of that day in India time, so the same date in both gives that whole day.\n- `source`: `api` or `web`.\n- `feature`: one check, in any case: Party screen, Bulk party screen, Party profile, Case search, AI search, Case lookup by CNR, Case view, Case orders, Document download, Case analysis, Case timeline, FIR linked cases, Acts and sections, Cause lists, Monitoring, Webhooks, Judge search, Account, Other.\n- `apiKeyId`, `userId`: only this key or user. Narrows what you may see, never widens it. Call Get my account (me) for your own userId.\n- `requestId`: the `X-Request-Id` a call returned.\n- `clientRef`: the `X-Client-Reference` header you sent on a call, or a batch item clientRef.\n- `order`: `newest` (default) or `oldest`. Keep the same order when passing a cursor.\n- `cursor`: the `data.nextCursor` of the previous page. Page until it is null.\n- `limit`: 1 to 100, default 50.\n\ndata: { items: [{ id, createdAt, source, sourceLabel, person, userId, apiKeyId, apiKeyName, apiKeyDisplay, feature, inputLabel, summary, statusCode, requestId, clientRefs, replayOf, client }], nextCursor, auditEnabled }. meta: { creditsCharged: 0, message (only when there is something to tell you, for example that access audit is not switched on) }."
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"code\": \"AUDIT_UNAVAILABLE\",\n  \"message\": \"The audit record could not be read right now. Please try again shortly.\",\n  \"error\": \"The audit record could not be read right now. Please try again shortly.\",\n  \"requestId\": \"8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get the audit record PDF of one call",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/pdf"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit/{{auditRequestId}}/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit",
+                "{{auditRequestId}}",
+                "pdf"
+              ]
+            },
+            "description": "The access audit record of one call as a CourtMesh branded A4 PDF to attach to a case file: request id, date and time (IST), who ran it, the input given and what came back. For a party screen: the overall verdict, each match with its CNR, court, title, status, identity verdict and reason, and the excluded cases with reasons. For a batch, one section per item. A case withheld after a removal request is shown as withheld. The PDF shows what was returned at the time of the call.\n\n`requestId` is the `X-Request-Id` response header the call returned; set it in the `auditRequestId` variable. The same visibility rule as List access audit records applies, and a request id outside it answers 404.\n\nThe record is written just after the response is sent, so a fetch in the same instant can answer 404 `AUDIT_NOT_FOUND`: wait a second and ask again. Free and unmetered; at most 30 PDFs a minute per key (429 `RATE_LIMITED` past that).\n\nReturns `application/pdf` with `Content-Disposition: attachment`. In Postman, use Send and Download to save the file."
+          },
+          "response": [
+            {
+              "name": "200 The record as a PDF",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/pdf"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit/{{auditRequestId}}/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit",
+                    "{{auditRequestId}}",
+                    "pdf"
+                  ]
+                },
+                "description": "The access audit record of one call as a CourtMesh branded A4 PDF to attach to a case file: request id, date and time (IST), who ran it, the input given and what came back. For a party screen: the overall verdict, each match with its CNR, court, title, status, identity verdict and reason, and the excluded cases with reasons. For a batch, one section per item. A case withheld after a removal request is shown as withheld. The PDF shows what was returned at the time of the call.\n\n`requestId` is the `X-Request-Id` response header the call returned; set it in the `auditRequestId` variable. The same visibility rule as List access audit records applies, and a request id outside it answers 404.\n\nThe record is written just after the response is sent, so a fetch in the same instant can answer 404 `AUDIT_NOT_FOUND`: wait a second and ask again. Free and unmetered; at most 30 PDFs a minute per key (429 `RATE_LIMITED` past that).\n\nReturns `application/pdf` with `Content-Disposition: attachment`. In Postman, use Send and Download to save the file."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/pdf"
+                },
+                {
+                  "key": "Content-Disposition",
+                  "value": "attachment; filename=\"courtmesh-record-9b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e.pdf\""
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "404 No record yet, or not one you may see",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/pdf"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit/{{auditRequestId}}/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit",
+                    "{{auditRequestId}}",
+                    "pdf"
+                  ]
+                },
+                "description": "The access audit record of one call as a CourtMesh branded A4 PDF to attach to a case file: request id, date and time (IST), who ran it, the input given and what came back. For a party screen: the overall verdict, each match with its CNR, court, title, status, identity verdict and reason, and the excluded cases with reasons. For a batch, one section per item. A case withheld after a removal request is shown as withheld. The PDF shows what was returned at the time of the call.\n\n`requestId` is the `X-Request-Id` response header the call returned; set it in the `auditRequestId` variable. The same visibility rule as List access audit records applies, and a request id outside it answers 404.\n\nThe record is written just after the response is sent, so a fetch in the same instant can answer 404 `AUDIT_NOT_FOUND`: wait a second and ask again. Free and unmetered; at most 30 PDFs a minute per key (429 `RATE_LIMITED` past that).\n\nReturns `application/pdf` with `Content-Disposition: attachment`. In Postman, use Send and Download to save the file."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"code\": \"AUDIT_NOT_FOUND\",\n  \"message\": \"No audit entry for this request id was found.\",\n  \"error\": \"No audit entry for this request id was found.\",\n  \"requestId\": \"8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f\"\n}"
+            },
+            {
+              "name": "429 Too many PDFs in a minute",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/pdf"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit/{{auditRequestId}}/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit",
+                    "{{auditRequestId}}",
+                    "pdf"
+                  ]
+                },
+                "description": "The access audit record of one call as a CourtMesh branded A4 PDF to attach to a case file: request id, date and time (IST), who ran it, the input given and what came back. For a party screen: the overall verdict, each match with its CNR, court, title, status, identity verdict and reason, and the excluded cases with reasons. For a batch, one section per item. A case withheld after a removal request is shown as withheld. The PDF shows what was returned at the time of the call.\n\n`requestId` is the `X-Request-Id` response header the call returned; set it in the `auditRequestId` variable. The same visibility rule as List access audit records applies, and a request id outside it answers 404.\n\nThe record is written just after the response is sent, so a fetch in the same instant can answer 404 `AUDIT_NOT_FOUND`: wait a second and ask again. Free and unmetered; at most 30 PDFs a minute per key (429 `RATE_LIMITED` past that).\n\nReturns `application/pdf` with `Content-Disposition: attachment`. In Postman, use Send and Download to save the file."
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"code\": \"RATE_LIMITED\",\n  \"message\": \"Too many PDF downloads in a short time. Please wait a minute and try again.\",\n  \"error\": \"Too many PDF downloads in a short time. Please wait a minute and try again.\",\n  \"requestId\": \"8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f\"\n}"
+            },
+            {
+              "name": "503 PDF could not be prepared (nothing charged)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/pdf"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/audit/{{auditRequestId}}/pdf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "audit",
+                    "{{auditRequestId}}",
+                    "pdf"
+                  ]
+                },
+                "description": "The access audit record of one call as a CourtMesh branded A4 PDF to attach to a case file: request id, date and time (IST), who ran it, the input given and what came back. For a party screen: the overall verdict, each match with its CNR, court, title, status, identity verdict and reason, and the excluded cases with reasons. For a batch, one section per item. A case withheld after a removal request is shown as withheld. The PDF shows what was returned at the time of the call.\n\n`requestId` is the `X-Request-Id` response header the call returned; set it in the `auditRequestId` variable. The same visibility rule as List access audit records applies, and a request id outside it answers 404.\n\nThe record is written just after the response is sent, so a fetch in the same instant can answer 404 `AUDIT_NOT_FOUND`: wait a second and ask again. Free and unmetered; at most 30 PDFs a minute per key (429 `RATE_LIMITED` past that).\n\nReturns `application/pdf` with `Content-Disposition: attachment`. In Postman, use Send and Download to save the file."
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "X-Request-Id",
+                  "value": "8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"code\": \"PDF_UNAVAILABLE\",\n  \"message\": \"The PDF could not be prepared right now. Please try again shortly.\",\n  \"error\": \"The PDF could not be prepared right now. Please try again shortly.\",\n  \"requestId\": \"8f14e45f-ceea-4c0f-9d33-1a2b3c4d5e6f\"\n}"
             }
           ]
         },
